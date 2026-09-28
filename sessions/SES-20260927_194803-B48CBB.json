@@ -1,0 +1,92 @@
+{
+  "schema_version": "1.0",
+  "session_id": "SES-20260927_194803-B48CBB",
+  "scenario_id": "SCN-03",
+  "scenario_title_en": "High Level & 1.4x Liquid Surge Challenge",
+  "scenario_title_ar": "طفرة التدفق العالي وتحدي حماية المستوى LAHH",
+  "status": "ABORTED",
+  "created_at": "2026-09-27T19:48:03.702887+00:00",
+  "completed_at": "2026-09-27T19:48:03.703899+00:00",
+  "elapsed_sim_s": 4.0,
+  "initial_conditions": {
+    "time_s": 0.0,
+    "level_mm": 2520.0,
+    "pressure_barg": 4.987,
+    "feed_liquid_m3_h": 1184.47,
+    "feed_gas_kg_h": 100132.0,
+    "out_liquid_m3_h": 794.94,
+    "out_gas_header_kg_h": 71522.86,
+    "fv001_pct": 23.44,
+    "pv003b_pct": 90.0,
+    "pv003a_pct": 0.0,
+    "uzv002_open": true,
+    "uzv003_open": true,
+    "alarm_status": "ALARM"
+  },
+  "events": [
+    {
+      "time_s": 0.0,
+      "category": "SCENARIO",
+      "message": "Loaded scenario: High Level & 1.4x Liquid Surge Challenge",
+      "level": "INFO"
+    },
+    {
+      "time_s": 0.0,
+      "category": "SCENARIO",
+      "message": "Mission started: High Level & 1.4x Liquid Surge Challenge",
+      "level": "INFO"
+    },
+    {
+      "time_s": 4.0,
+      "category": "SCENARIO",
+      "message": "Mission aborted by operator.",
+      "level": "WARNING"
+    }
+  ],
+  "debrief": {
+    "scenario_id": "SCN-03",
+    "scenario_title_en": "High Level & 1.4x Liquid Surge Challenge",
+    "scenario_title_ar": "طفرة التدفق العالي وتحدي حماية المستوى LAHH",
+    "passed": false,
+    "result": "FAILED",
+    "outcome_message": "Scenario aborted by operator.",
+    "status_message_en": "Scenario aborted by operator.",
+    "status_message_ar": "تم إيقاف المهمة بواسطة المشغل.",
+    "duration_s": 4.0,
+    "final_metrics": {
+      "level_mm": 2526.1,
+      "pressure_barg": 6.32,
+      "out_liquid_m3_h": 760.4,
+      "flared_kg_h": 3.4
+    },
+    "final_state": {
+      "level_mm": 2526.1,
+      "pressure_barg": 6.32,
+      "out_liquid_m3_h": 760.4,
+      "total_flared_kg": 3.4,
+      "alarm_status": "ALARM",
+      "tripped_causes": []
+    },
+    "physical_cause_en": "Without supervisor override, liquid accumulation in a cylindrical vessel accelerates near the top as chord width narrows.",
+    "physical_cause_ar": "",
+    "design_lesson_en": "LAHH trip automatically closes feed SDVs UZV-051/052 and gas SDV UZV-003 (UZ Group 15).",
+    "design_lesson_ar": "",
+    "educational_review": {
+      "learning_objective": "Understand the administrative 100 kBOPD capacity cap on FIC-001 and the role of supervisor override during transient surges.",
+      "key_takeaway": "Without supervisor override, liquid accumulation in a cylindrical vessel accelerates near the top as chord width narrows.",
+      "design_reference": "DESIGN.md §9.4 & IN-2105-0007",
+      "safety_note": "LAHH trip automatically closes feed SDVs UZV-051/052 and gas SDV UZV-003 (UZ Group 15)."
+    },
+    "events_count": 3
+  },
+  "summary_metrics": {
+    "duration_s": 4.0,
+    "events_count": 3,
+    "passed": false,
+    "result": "ABORTED",
+    "outcome_message": "Scenario aborted by operator.",
+    "final_level_mm": 2526.1,
+    "final_pressure_barg": 6.32,
+    "final_alarm_status": "ALARM"
+  }
+}

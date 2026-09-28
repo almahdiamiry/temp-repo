@@ -1,0 +1,92 @@
+{
+  "schema_version": "1.0",
+  "session_id": "SES-20260926_172701-008F8D",
+  "scenario_id": "SCN-U2-01",
+  "scenario_title_en": "Stage 2 Normal Baseline",
+  "scenario_title_ar": "خط الأساس للمرحلة الثانية",
+  "status": "COMPLETED",
+  "created_at": "2026-09-26T17:27:01.317586+00:00",
+  "completed_at": "2026-09-26T17:27:01.318118+00:00",
+  "elapsed_sim_s": 10.0,
+  "initial_conditions": {
+    "time_s": 0.0,
+    "level_mm": 1100.0,
+    "pressure_barg": 1.2,
+    "feed_liquid_m3_h": 0.0,
+    "feed_gas_kg_h": 0.0,
+    "out_liquid_m3_h": 0.0,
+    "out_gas_header_kg_h": 0.0,
+    "fv001_pct": 0.0,
+    "pv003b_pct": 0.0,
+    "pv003a_pct": 0.0,
+    "uzv002_open": true,
+    "uzv003_open": true,
+    "alarm_status": "NORMAL"
+  },
+  "events": [
+    {
+      "time_s": 0.0,
+      "category": "SCENARIO",
+      "message": "Loaded scenario: Stage 2 Normal Baseline",
+      "level": "INFO"
+    },
+    {
+      "time_s": 0.0,
+      "category": "SCENARIO",
+      "message": "Mission started: Stage 2 Normal Baseline",
+      "level": "INFO"
+    },
+    {
+      "time_s": 10.0,
+      "category": "SCENARIO",
+      "message": "Mission Accomplished: Stage 2 Stable",
+      "level": "SUCCESS"
+    }
+  ],
+  "debrief": {
+    "scenario_id": "SCN-U2-01",
+    "scenario_title_en": "Stage 2 Normal Baseline",
+    "scenario_title_ar": "خط الأساس للمرحلة الثانية",
+    "passed": true,
+    "result": "COMPLETED",
+    "outcome_message": "Stage 2 Stable",
+    "status_message_en": "Stage 2 Stable",
+    "status_message_ar": "المرحلة مستقرة",
+    "duration_s": 10.0,
+    "final_metrics": {
+      "level_mm": 1100.0,
+      "pressure_barg": 1.2,
+      "out_liquid_m3_h": 0.0,
+      "flared_kg_h": 0.0
+    },
+    "final_state": {
+      "level_mm": 1100.0,
+      "pressure_barg": 1.2,
+      "out_liquid_m3_h": 0.0,
+      "total_flared_kg": 0.0,
+      "alarm_status": "NORMAL",
+      "tripped_causes": []
+    },
+    "physical_cause_en": "Low pressure degassing complete.",
+    "physical_cause_ar": "",
+    "design_lesson_en": "Operate inside safety envelope.",
+    "design_lesson_ar": "",
+    "educational_review": {
+      "learning_objective": "Understand low-pressure separation equilibrium.",
+      "key_takeaway": "Low pressure degassing complete.",
+      "design_reference": "PX-2365-1002",
+      "safety_note": "Operating inside normal safety envelope."
+    },
+    "events_count": 3
+  },
+  "summary_metrics": {
+    "duration_s": 10.0,
+    "events_count": 3,
+    "passed": true,
+    "result": "COMPLETED",
+    "outcome_message": "Stage 2 Stable",
+    "final_level_mm": 1100.0,
+    "final_pressure_barg": 1.2,
+    "final_alarm_status": "NORMAL"
+  }
+}

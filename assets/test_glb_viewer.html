@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Majnoon Digital Twin (Option 4 - GLTF/GLB Engine)</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { overflow: hidden; background: #070d18; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #fff; }
+    #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; }
+    
+    /* Top Bar Header */
+    #top-bar {
+      position: absolute; top: 16px; left: 20px; z-index: 10;
+      background: rgba(11, 23, 44, 0.88); backdrop-filter: blur(10px);
+      padding: 12px 20px; border-radius: 8px; border: 1px solid rgba(0, 172, 193, 0.35);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+    }
+    #top-bar h1 { font-size: 16px; font-weight: 700; color: #4dd0e1; letter-spacing: 0.5px; }
+    #top-bar p { font-size: 11px; color: #90a4ae; margin-top: 4px; }
+    
+    /* View Controls Panel */
+    #view-panel {
+      position: absolute; top: 16px; right: 20px; z-index: 10;
+      background: rgba(11, 23, 44, 0.88); backdrop-filter: blur(10px);
+      padding: 12px 16px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.12);
+      display: flex; gap: 8px;
+    }
+    .view-btn {
+      background: #1e293b; border: 1px solid #334155; color: #cbd5e1;
+      padding: 8px 12px; border-radius: 6px; font-size: 11px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s ease;
+    }
+    .view-btn:hover { background: #00acc1; color: #fff; border-color: #00acc1; }
+    
+    /* Info Card */
+    #info-card {
+      position: absolute; bottom: 20px; left: 20px; z-index: 10;
+      background: rgba(11, 23, 44, 0.92); backdrop-filter: blur(10px);
+      padding: 16px; border-radius: 8px; border: 1px solid rgba(0, 172, 193, 0.4);
+      min-width: 280px; box-shadow: 0 8px 32px rgba(0,0,0,0.6); display: none;
+    }
+    #info-card h3 { font-size: 14px; color: #00acc1; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px; }
+    #info-card .row { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px; }
+    #info-card .lbl { color: #94a3b8; }
+    #info-card .val { color: #f8fafc; font-family: monospace; font-weight: 600; }
+    
+    /* Legend */
+    #legend {
+      position: absolute; bottom: 20px; right: 20px; z-index: 10;
+      background: rgba(11, 23, 44, 0.88); backdrop-filter: blur(10px);
+      padding: 12px 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);
+      font-size: 11px;
+    }
+    .leg-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .leg-dot { width: 12px; height: 12px; border-radius: 3px; }
+    
+    /* Loader Spinner */
+    #loading-overlay {
+      position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: #070d18; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; z-index: 100; transition: opacity 0.5s ease;
+    }
+    .spinner {
+      width: 48px; height: 48px; border: 4px solid rgba(0, 172, 193, 0.2);
+      border-top-color: #00acc1; border-radius: 50%; animation: spin 1s infinite linear;
+      margin-bottom: 16px;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./three.module.js",
+      "three/addons/": "./"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="loading-overlay">
+    <div class="spinner"></div>
+    <div style="font-size: 14px; color: #4dd0e1; font-weight: 600;">Loading Optimized Digital Twin (Option 4)...</div>
+    <div style="font-size: 11px; color: #94a3b8; margin-top: 6px;">2.66 MB Meshopt Quantized GLB</div>
+  </div>
+
+  <div id="top-bar">
+    <h1>Majnoon CP2-V-71101 Digital Twin</h1>
+    <p>Option 4 Pipeline | OpenCASCADE + gltfpack (-cc -tc -kn) | 2.66 MB | 19 Draw Calls</p>
+  </div>
+
+  <div id="view-panel">
+    <button class="view-btn" onclick="setView('iso')">ISO Overview</button>
+    <button class="view-btn" onclick="setView('gas')">Gas Platform / PSVs</button>
+    <button class="view-btn" onclick="setView('inlet')">Inlet Manifold / UZV</button>
+    <button class="view-btn" onclick="setView('front')">Side Cutaway</button>
+    <button class="view-btn" onclick="setView('top')">Top Deck Plan</button>
+  </div>
+
+  <div id="info-card">
+    <h3 id="card-tag">Tag Name</h3>
+    <div class="row"><span class="lbl">Category:</span><span class="val" id="card-cat">-</span></div>
+    <div class="row"><span class="lbl">Triangles:</span><span class="val" id="card-tris">-</span></div>
+    <div class="row"><span class="lbl">Coordinates:</span><span class="val" id="card-coords">-</span></div>
+    <div class="row"><span class="lbl">Status:</span><span class="val" id="card-status" style="color: #4ade80;">Active Normal</span></div>
+  </div>
+
+  <div id="legend">
+    <div class="leg-item"><div class="leg-dot" style="background: #00acc1;"></div>Process Piping (Bare ASME B36.10)</div>
+    <div class="leg-item"><div class="leg-dot" style="background: #546e7a;"></div>HDG Galvanized Platform / Stairs</div>
+    <div class="leg-item"><div class="leg-dot" style="background: #b8c4d0;"></div>Separator Vessel Shell</div>
+    <div class="leg-item"><div class="leg-dot" style="background: #ff5722;"></div>Emergency / Control Valves (UZV/PV)</div>
+    <div class="leg-item"><div class="leg-dot" style="background: #ffb300;"></div>Safety Relief Valves (PSV)</div>
+  </div>
+
+  <div id="canvas-container"></div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+
+    let scene, camera, renderer, controls;
+    let modelGroup;
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    const container = document.getElementById('canvas-container');
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    // Renderer
+    renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(width, height);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    // Scene
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x070d18);
+    scene.fog = new THREE.FogExp2(0x070d18, 0.008);
+
+    // Camera
+    camera = new THREE.PerspectiveCamera(40, width / height, 0.2, 500);
+    camera.position.set(20, 12, 22);
+
+    // Controls
+    controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.target.set(0, 1.5, 0);
+    controls.maxPolarAngle = Math.PI / 2 + 0.02;
+
+    // Lights
+    const hemiLight = new THREE.HemisphereLight(0xddeeff, 0x111625, 0.9);
+    scene.add(hemiLight);
+
+    const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.4);
+    dirLight1.position.set(25, 35, 20);
+    dirLight1.castShadow = true;
+    dirLight1.shadow.mapSize.width = 2048;
+    dirLight1.shadow.mapSize.height = 2048;
+    scene.add(dirLight1);
+
+    const dirLight2 = new THREE.DirectionalLight(0x7090b0, 0.7);
+    dirLight2.position.set(-25, 20, -20);
+    scene.add(dirLight2);
+
+    // Ground Grid
+    const grid = new THREE.GridHelper(80, 80, 0x00acc1, 0x1e293b);
+    grid.position.y = -6.0;
+    scene.add(grid);
+
+    // Load Model
+    const loader = new GLTFLoader();
+    loader.setMeshoptDecoder(MeshoptDecoder);
+
+    const t0 = performance.now();
+    loader.load('./final_twin.glb', (gltf) => {
+      modelGroup = gltf.scene;
+      scene.add(modelGroup);
+
+      // Fine-tune materials for photorealistic engineering fidelity
+      modelGroup.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+          const nodeName = child.name || (child.parent && child.parent.name) || "";
+          
+          if (nodeName.includes("structure")) {
+            // HDG Galvanized Slate Gray
+            child.material = new THREE.MeshStandardMaterial({
+              color: 0x546e7a,
+              roughness: 0.85,
+              metalness: 0.20,
+              flatShading: true
+            });
+          } else if (nodeName.includes("piping")) {
+            // Process Piping Cyan
+            child.material = new THREE.MeshStandardMaterial({
+              color: 0x00acc1,
+              roughness: 0.35,
+              metalness: 0.25
+            });
+          } else if (nodeName.includes("vessel_shell")) {
+            // Vessel Steel
+            child.material = new THREE.MeshStandardMaterial({
+              color: 0xb8c4d0,
+              roughness: 0.40,
+              metalness: 0.60
+            });
+          } else if (nodeName.includes("vessel_nozzles")) {
+            // Nozzles & Saddles
+            child.material = new THREE.MeshStandardMaterial({
+              color: 0x9aa8b8,
+              roughness: 0.50,
+              metalness: 0.50
+            });
+          } else if (nodeName.includes("PSV")) {
+            // Safety Valves
+            child.material = new THREE.MeshStandardMaterial({
+              color: 0xffb300,
+              roughness: 0.30,
+              metalness: 0.40
+            });
+          } else if (nodeName.includes("UZV") || nodeName.includes("PV") || nodeName.includes("FV")) {
+            // Control & ESD Valves
+            child.material = new THREE.MeshStandardMaterial({
+              color: 0xff5722,
+              roughness: 0.30,
+              metalness: 0.35
+            });
+          } else if (nodeName.startsWith("tag:")) {
+            // Instruments
+            child.material = new THREE.MeshStandardMaterial({
+              color: 0x43a047,
+              roughness: 0.35,
+              metalness: 0.30
+            });
+          }
+        }
+      });
+
+      console.log(`GLB loaded & initialized in ${(performance.now() - t0).toFixed(1)}ms!`);
+      const overlay = document.getElementById('loading-overlay');
+      overlay.style.opacity = '0';
+      setTimeout(() => overlay.style.display = 'none', 500);
+    }, undefined, (err) => {
+      console.error('Error loading GLB:', err);
+    });
+
+    // Raycasting for interactive click inspection
+    window.addEventListener('click', (e) => {
+      if (!modelGroup) return;
+      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(modelGroup.children, true);
+      if (intersects.length > 0) {
+        const hit = intersects[0].object;
+        const node = hit.parent && hit.parent.name ? hit.parent : hit;
+        const extras = node.userData || {};
+        const card = document.getElementById('info-card');
+        
+        document.getElementById('card-tag').innerText = extras.tag || node.name || "Object";
+        document.getElementById('card-cat').innerText = extras.category || "Equipment/Component";
+        document.getElementById('card-tris').innerText = extras.triCount ? extras.triCount.toLocaleString() : (hit.geometry.index ? (hit.geometry.index.count/3).toLocaleString() : "-");
+        document.getElementById('card-coords').innerText = `[${intersects[0].point.x.toFixed(2)}, ${intersects[0].point.y.toFixed(2)}, ${intersects[0].point.z.toFixed(2)}]`;
+        card.style.display = 'block';
+      }
+    });
+
+    window.setView = function(name) {
+      if (!controls) return;
+      if (name === 'iso') {
+        camera.position.set(22, 14, 20);
+        controls.target.set(0, 1.5, 0);
+      } else if (name === 'gas') {
+        camera.position.set(-11, 9.5, 0);
+        controls.target.set(-7.5, 6.0, 0);
+      } else if (name === 'inlet') {
+        camera.position.set(16, 0.5, 16);
+        controls.target.set(11, -3.5, 11.8);
+      } else if (name === 'front') {
+        camera.position.set(0, 1.5, 18);
+        controls.target.set(0, 1.5, 0);
+      } else if (name === 'top') {
+        camera.position.set(0, 24, 0.1);
+        controls.target.set(0, 0, 0);
+      }
+      controls.update();
+    };
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>

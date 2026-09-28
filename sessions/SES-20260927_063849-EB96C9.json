@@ -1,0 +1,100 @@
+{
+  "schema_version": "1.0",
+  "session_id": "SES-20260927_063849-EB96C9",
+  "scenario_id": "SCN-03",
+  "scenario_title_en": "High Level & 1.4x Liquid Surge Challenge",
+  "scenario_title_ar": "طفرة التدفق العالي وتحدي حماية المستوى LAHH",
+  "status": "FAILED",
+  "created_at": "2026-09-27T06:38:49.178053+00:00",
+  "completed_at": "2026-09-27T06:38:49.232268+00:00",
+  "elapsed_sim_s": 92.2,
+  "initial_conditions": {
+    "time_s": 5.0,
+    "level_mm": 2520.0,
+    "pressure_barg": 4.987,
+    "feed_liquid_m3_h": 1184.47,
+    "feed_gas_kg_h": 100132.0,
+    "out_liquid_m3_h": 794.94,
+    "out_gas_header_kg_h": 71522.86,
+    "fv001_pct": 23.44,
+    "pv003b_pct": 90.0,
+    "pv003a_pct": 0.0,
+    "uzv002_open": true,
+    "uzv003_open": true,
+    "alarm_status": "ALARM"
+  },
+  "events": [
+    {
+      "time_s": 5.0,
+      "category": "SCENARIO",
+      "message": "Loaded scenario: High Level & 1.4x Liquid Surge Challenge",
+      "level": "INFO"
+    },
+    {
+      "time_s": 5.0,
+      "category": "SCENARIO",
+      "message": "Mission started: High Level & 1.4x Liquid Surge Challenge",
+      "level": "INFO"
+    },
+    {
+      "time_s": 97.2,
+      "category": "INTERLOCK",
+      "message": "ESD Trip Triggered! Causes: LAHH >= 2700 mm: Feed SDVs & Gas SDV (UZV-003) Tripped",
+      "level": "DANGER"
+    },
+    {
+      "time_s": 97.2,
+      "category": "SCENARIO",
+      "message": "Mission Failed: LAHH Trip occurred: Separator overfilled because 100 kBOPD clamp was not raised in time.",
+      "level": "DANGER"
+    }
+  ],
+  "debrief": {
+    "scenario_id": "SCN-03",
+    "scenario_title_en": "High Level & 1.4x Liquid Surge Challenge",
+    "scenario_title_ar": "طفرة التدفق العالي وتحدي حماية المستوى LAHH",
+    "passed": false,
+    "result": "FAILED",
+    "outcome_message": "LAHH Trip occurred: Separator overfilled because 100 kBOPD clamp was not raised in time.",
+    "status_message_en": "LAHH Trip occurred: Separator overfilled because 100 kBOPD clamp was not raised in time.",
+    "status_message_ar": "حدث إيقاف اضطراري LAHH: امتلأت العازلة لأن قيد السعة 100 ألف برميل لم يتم رفعه بالوقت المناسب.",
+    "duration_s": 92.2,
+    "final_metrics": {
+      "level_mm": 2700.3,
+      "pressure_barg": 4.99,
+      "out_liquid_m3_h": 819.2,
+      "flared_kg_h": 7.0
+    },
+    "final_state": {
+      "level_mm": 2700.3,
+      "pressure_barg": 4.99,
+      "out_liquid_m3_h": 819.2,
+      "total_flared_kg": 7.0,
+      "alarm_status": "TRIP",
+      "tripped_causes": [
+        "LAHH >= 2700 mm: Feed SDVs & Gas SDV (UZV-003) Tripped"
+      ]
+    },
+    "physical_cause_en": "Without supervisor override, liquid accumulation in a cylindrical vessel accelerates near the top as chord width narrows.",
+    "physical_cause_ar": "",
+    "design_lesson_en": "LAHH trip automatically closes feed SDVs UZV-051/052 and gas SDV UZV-003 (UZ Group 15).",
+    "design_lesson_ar": "",
+    "educational_review": {
+      "learning_objective": "Understand the administrative 100 kBOPD capacity cap on FIC-001 and the role of supervisor override during transient surges.",
+      "key_takeaway": "Without supervisor override, liquid accumulation in a cylindrical vessel accelerates near the top as chord width narrows.",
+      "design_reference": "DESIGN.md §9.4 & IN-2105-0007",
+      "safety_note": "LAHH trip automatically closes feed SDVs UZV-051/052 and gas SDV UZV-003 (UZ Group 15)."
+    },
+    "events_count": 4
+  },
+  "summary_metrics": {
+    "duration_s": 92.2,
+    "events_count": 4,
+    "passed": false,
+    "result": "FAILED",
+    "outcome_message": "LAHH Trip occurred: Separator overfilled because 100 kBOPD clamp was not raised in time.",
+    "final_level_mm": 2700.3,
+    "final_pressure_barg": 4.99,
+    "final_alarm_status": "TRIP"
+  }
+}
