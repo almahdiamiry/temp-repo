@@ -1,0 +1,3623 @@
+<!DOCTYPE html>
+<html lang="__HTML_LANG__" dir="__HTML_DIR__">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CP2-V-71101 OTS Digital Twin & CFD Multiphase Simulator</title>
+    <style>
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #121824;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: #e2e8f0;
+            width: 100vw;
+            height: 100vh;
+        }
+        #app-root {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: #121824;
+        }
+
+        /* --- Header Bar --- */
+        #header-bar {
+            height: 48px;
+            background: #1a2232;
+            border-bottom: 1px solid #2d3748;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            z-index: 10;
+        }
+        .brand-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #38bdf8;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .brand-sub {
+            font-size: 11px;
+            color: #94a3b8;
+            font-weight: 400;
+        }
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* --- Buttons & Badges --- */
+        .btn {
+            background: #242f42;
+            border: 1px solid #3b4a62;
+            color: #e2e8f0;
+            padding: 5px 11px;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.15s ease-in-out;
+            font-weight: 500;
+        }
+        .btn:hover {
+            background: #2e3d55;
+            border-color: #38bdf8;
+            color: #fff;
+        }
+        .btn-active {
+            background: #0284c7 !important;
+            border-color: #38bdf8 !important;
+            color: #fff !important;
+        }
+        .btn-danger {
+            background: #dc2626 !important;
+            border-color: #ef4444 !important;
+            color: #fff !important;
+        }
+        .btn-success {
+            background: #16a34a !important;
+            border-color: #22c55e !important;
+            color: #fff !important;
+        }
+        .btn-warning {
+            background: #d97706 !important;
+            border-color: #f59e0b !important;
+            color: #fff !important;
+        }
+        .btn-special {
+            background: linear-gradient(135deg, #0284c7 0%, #7c3aed 100%) !important;
+            border-color: #a855f7 !important;
+            color: #fff !important;
+            font-weight: 700 !important;
+            box-shadow: 0 0 12px rgba(168, 85, 247, 0.45);
+        }
+        .btn-special:hover {
+            box-shadow: 0 0 18px rgba(168, 85, 247, 0.75);
+            transform: translateY(-1px);
+        }
+
+        /* --- Main Viewport Container --- */
+        #viewport-container {
+            position: relative;
+            flex: 1;
+            width: 100%;
+            height: calc(100% - 108px);
+            overflow: hidden;
+            background: #141b27;
+        }
+        #view-3d {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        #view-2d {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            background: #101622;
+        }
+
+        /* --- On-Canvas Telemetry HUD --- */
+        #hud-telemetry {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            max-width: 480px;
+            pointer-events: none;
+            z-index: 5;
+        }
+        .tele-chip {
+            background: rgba(26, 34, 50, 0.88);
+            backdrop-filter: blur(8px);
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 5px 9px;
+            pointer-events: auto;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        .tele-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            color: #94a3b8;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+        .tele-val {
+            font-size: 13px;
+            font-weight: 700;
+            color: #38bdf8;
+            font-family: "SF Mono", Monaco, Consolas, monospace;
+        }
+
+        /* --- Startup Banner Notification --- */
+        #hud-startup-banner {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(8px);
+            border: 1px solid #38bdf8;
+            border-radius: 8px;
+            padding: 8px 14px;
+            color: #f8fafc;
+            font-size: 11.5px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+            z-index: 6;
+            transition: all 0.3s ease;
+        }
+
+        /* --- Process Phase Legend --- */
+        #hud-legend {
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            background: rgba(26, 34, 50, 0.88);
+            backdrop-filter: blur(8px);
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 6px 12px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            font-size: 10.5px;
+            color: #cbd5e1;
+            z-index: 5;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        .legend-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        /* --- Raycast Inspection Card --- */
+        #card-inspect {
+            position: absolute;
+            top: 60px;
+            right: 14px;
+            width: 320px;
+            background: rgba(26, 34, 50, 0.94);
+            backdrop-filter: blur(12px);
+            border: 1px solid #38bdf8;
+            border-radius: 8px;
+            padding: 14px;
+            display: none;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            z-index: 6;
+        }
+        #card-inspect h3 {
+            margin: 0 0 8px 0;
+            font-size: 13px;
+            color: #38bdf8;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 6px;
+        }
+        #card-inspect h3 span.tag {
+            font-size: 10px;
+            background: #0284c7;
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        #card-desc {
+            font-size: 11px;
+            color: #cbd5e1;
+            line-height: 1.45;
+            margin-bottom: 10px;
+        }
+        .card-data-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+        .card-data-item {
+            background: #141b27;
+            border: 1px solid #2d3748;
+            border-radius: 4px;
+            padding: 4px 6px;
+        }
+        .card-data-item .lbl {
+            font-size: 9px;
+            color: #94a3b8;
+            text-transform: uppercase;
+        }
+        .card-data-item .val {
+            font-size: 11px;
+            font-weight: 700;
+            color: #f1f5f9;
+            font-family: "SF Mono", Monaco, Consolas, monospace;
+        }
+
+        /* --- Overrides Drawer --- */
+        #drawer-overrides {
+            position: absolute;
+            top: 48px;
+            right: 0;
+            width: 320px;
+            height: calc(100% - 108px);
+            background: rgba(26, 34, 50, 0.96);
+            backdrop-filter: blur(12px);
+            border-left: 1px solid #334155;
+            padding: 16px;
+            display: none;
+            overflow-y: auto;
+            z-index: 8;
+            box-shadow: -5px 0 15px rgba(0, 0, 0, 0.4);
+        }
+        #drawer-overrides h4 {
+            margin: 0 0 12px 0;
+            color: #38bdf8;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .drawer-close {
+            cursor: pointer;
+            color: #94a3b8;
+            font-size: 14px;
+        }
+        .drawer-close:hover {
+            color: #fff;
+        }
+        .override-group {
+            margin-bottom: 14px;
+            background: #141b27;
+            border: 1px solid #2d3748;
+            border-radius: 6px;
+            padding: 10px;
+        }
+        .override-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        /* --- Bottom Controls Dock --- */
+        #dock-bar {
+            height: 60px;
+            background: #1a2232;
+            border-top: 1px solid #2d3748;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 0 16px;
+            gap: 4px;
+            z-index: 10;
+        }
+        .dock-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .dock-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        select {
+            background: #141b27;
+            border: 1px solid #3b4a62;
+            color: #f1f5f9;
+            padding: 5px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            outline: none;
+            cursor: pointer;
+        }
+        select:focus {
+            border-color: #38bdf8;
+        }
+        .status-badge {
+            font-size: 10.5px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 4px;
+            letter-spacing: 0.5px;
+        }
+        .badge-normal {
+            background: #166534;
+            color: #86efac;
+            border: 1px solid #22c55e;
+        }
+        .badge-warning {
+            background: #854d0e;
+            color: #fde047;
+            border: 1px solid #facc15;
+        }
+        .badge-danger {
+            background: #991b1b;
+            color: #fca5a5;
+            border: 1px solid #ef4444;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="app-root">
+        <!-- Header Bar -->
+        <header id="header-bar">
+            <div class="brand-title">
+                <span>⚡</span>
+                <span id="txt-brand-title">CP2-V-71101 OTS DIGITAL TWIN</span>
+                <span class="brand-sub" id="txt-brand-sub">| 1st Stage Production Separator • BOC Majnoon CPF-2</span>
+            </div>
+            <div class="header-actions">
+                <span id="badge-status" class="status-badge badge-normal">NORMAL</span>
+                <!-- Fast-Access Cold Startup Button -->
+                <button id="btn-startup-header" class="btn btn-special" onclick="triggerColdStartup()">🚀 Cold Startup & Fill</button>
+                <!-- Universal Educational Cutaway Toggle Button -->
+                <button id="btn-cutaway-mode" class="btn btn-warning" onclick="cycleCutawayMode()">✂️ Cutaway: Full Plant (Educational)</button>
+                <!-- CFD Flow Toggle Button -->
+                <button id="btn-cfd-flow" class="btn btn-active" onclick="cycleCfdMode()">🌊 Flow: Continuous CFD</button>
+                <button id="btn-view-3d" class="btn btn-active">🌐 3D Digital Twin</button>
+                <button id="btn-view-2d" class="btn">📟 2D DCS Console</button>
+                <button id="btn-overrides" class="btn">🎛️ Overrides</button>
+                <button id="btn-lang" class="btn">🌐 العربية</button>
+            </div>
+        </header>
+
+        <!-- Main Viewport -->
+        <div id="viewport-container">
+            <!-- 3D Three.js View -->
+            <div id="view-3d"></div>
+
+            <!-- 2D DCS Console SVG Mimic (Proportional to Sulzer GA 1:1) -->
+            <div id="view-2d">
+                <svg width="100%" height="100%" viewBox="0 0 1000 560" preserveAspectRatio="xMidYMid meet" style="background:#0d121a;">
+                    <!-- Grid background lines -->
+                    <defs>
+                        <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#161e2b" stroke-width="1"/>
+                        </pattern>
+                    </defs>
+                    <rect width="1000" height="560" fill="url(#grid)" />
+
+                    <!-- Vessel Body Outline (L = 520 px, D = 180 px, Left TL = 240, Right TL = 760) -->
+                    <rect x="240" y="160" width="520" height="180" rx="40" fill="#141c27" stroke="#38bdf8" stroke-width="2.5"/>
+
+                    <!-- Liquid Pool in 2D DCS -->
+                    <g id="dcs-liquid-pool">
+                        <rect id="dcs-water-layer" x="245" y="295" width="510" height="40" fill="#0284c7" opacity="0.85"/>
+                        <rect id="dcs-oil-layer" x="245" y="235" width="510" height="60" fill="#d97706" opacity="0.88"/>
+                    </g>
+
+                    <!-- Internals Positioned Exactly per Sulzer GA Drawing B01-0001 -->
+                    <!-- 1. Schoepentoeter (Left Head x=240 to 313) -->
+                    <rect x="240" y="195" width="73" height="36" fill="#475569" stroke="#94a3b8" stroke-width="1.5" rx="3"/>
+                    <text x="246" y="217" font-size="8.5" fill="#f8fafc" font-weight="700">SCHOEPENTOETER</text>
+
+                    <!-- 2. Perforated Baffle Plate (EL. +7000 mm -> x = 507 px) -->
+                    <line x1="507" y1="165" x2="507" y2="335" stroke="#94a3b8" stroke-width="2.5" stroke-dasharray="4 3"/>
+                    <text x="475" y="152" font-size="9" fill="#94a3b8" font-weight="700">BAFFLE 30%</text>
+
+                    <!-- 3. Mellachevron H2V2 Droplet Coalescer (EL. +9100 mm -> x = 588 px) -->
+                    <rect x="588" y="165" width="41" height="65" fill="#334155" stroke="#38bdf8" stroke-width="1.5"/>
+                    <text x="582" y="152" font-size="9" fill="#38bdf8" font-weight="700">CHEVRON</text>
+
+                    <!-- 4. KnitMesh Demister Box KM N3 (EL. +11200 mm -> x = 668 px) -->
+                    <rect x="645" y="165" width="65" height="18" fill="#475569" stroke="#cbd5e1" stroke-width="1.5"/>
+                    <text x="640" y="152" font-size="8.5" fill="#cbd5e1" font-weight="700">DEMISTER N3</text>
+
+                    <!-- 5. Cruciform Vortex Breaker inside N2 (EL. +12600 mm -> x = 721 px) -->
+                    <line x1="713" y1="334" x2="729" y2="334" stroke="#f59e0b" stroke-width="3"/>
+                    <line x1="721" y1="328" x2="721" y2="340" stroke="#f59e0b" stroke-width="3"/>
+
+                    <!-- Process Piping Lines -->
+                    <!-- Inlet Feed Piping (30" entering left head at y=213) -->
+                    <path d="M 80 213 L 240 213" fill="none" stroke="#64748b" stroke-width="10"/>
+                    <!-- UZV-051 & UZV-052 -->
+                    <polygon points="120,205 140,221 140,205 120,221" fill="#1e293b" stroke="#22c55e" stroke-width="2" id="dcs-uzv051"/>
+                    <text x="110" y="196" font-size="10" fill="#22c55e" font-weight="600">UZV-051</text>
+                    <polygon points="175,205 195,221 195,205 175,221" fill="#1e293b" stroke="#22c55e" stroke-width="2" id="dcs-uzv052"/>
+                    <text x="165" y="196" font-size="10" fill="#22c55e" font-weight="600">UZV-052</text>
+                    <text x="75" y="185" font-size="11" fill="#38bdf8" font-weight="700">30" FEED FROM WELLS</text>
+
+                    <!-- Liquid Outlet Piping (24" dropping from N2 at x=721 px) -->
+                    <path d="M 721 340 L 721 440 L 930 440" fill="none" stroke="#475569" stroke-width="8"/>
+                    <!-- UZV-002 -->
+                    <polygon points="755,432 775,448 775,432 755,448" fill="#1e293b" stroke="#22c55e" stroke-width="2" id="dcs-uzv002"/>
+                    <text x="750" y="424" font-size="10" fill="#22c55e" font-weight="600">UZV-002</text>
+                    <!-- FV-001 Globe Valve (14") -->
+                    <polygon points="830,432 850,448 850,432 830,448" fill="#1e293b" stroke="#22c55e" stroke-width="2" id="dcs-fv001"/>
+                    <text x="820" y="468" font-size="10" fill="#22c55e" font-weight="700" id="dcs-fv001-lbl">FV-001: 52%</text>
+                    <text x="860" y="428" font-size="11" fill="#22c55e" font-weight="700">TO 2ND STAGE</text>
+
+                    <!-- Gas Outlet Piping (20" rising from N3 at x=668 px to Header) -->
+                    <path d="M 668 160 L 668 80 L 930 80" fill="none" stroke="#64748b" stroke-width="7"/>
+                    <!-- UZV-003 -->
+                    <polygon points="740,72 760,88 760,72 740,88" fill="#1e293b" stroke="#22c55e" stroke-width="2" id="dcs-uzv003"/>
+                    <text x="735" y="64" font-size="10" fill="#22c55e" font-weight="600">UZV-003</text>
+                    <!-- PV-003B (Gas Header Valve) -->
+                    <polygon points="840,72 860,88 860,72 840,88" fill="#1e293b" stroke="#22c55e" stroke-width="2"/>
+                    <text x="830" y="108" font-size="10" fill="#22c55e" font-weight="700" id="dcs-pv003b-lbl">PV-003B: 90%</text>
+                    <text x="865" y="65" font-size="11" fill="#22c55e" font-weight="700">TO GAS HEADER</text>
+                    <!-- PV-003A (Flare Valve) -->
+                    <path d="M 795 80 L 795 30 L 930 30" fill="none" stroke="#dc2626" stroke-width="5"/>
+                    <polygon points="840,22 860,38 860,22 840,38" fill="#1e293b" stroke="#ef4444" stroke-width="2"/>
+                    <text x="835" y="15" font-size="10" fill="#ef4444" font-weight="700" id="dcs-pv003a-lbl">PV-003A: 0%</text>
+                    <text x="870" y="24" font-size="11" fill="#ef4444" font-weight="700">TO HP FLARE</text>
+
+                    <!-- P&ID Transmitter Display Badges -->
+                    <rect x="390" y="95" width="95" height="34" rx="4" fill="#1a2232" stroke="#38bdf8" stroke-width="1.5"/>
+                    <text x="400" y="109" font-size="9" fill="#94a3b8">PT-001 (BARG)</text>
+                    <text x="400" y="123" font-size="12" font-weight="700" fill="#38bdf8" id="dcs-pt001-val">5.00</text>
+
+                    <rect x="510" y="95" width="95" height="34" rx="4" fill="#1a2232" stroke="#22c55e" stroke-width="1.5"/>
+                    <text x="520" y="109" font-size="9" fill="#94a3b8">LT-002 (MM)</text>
+                    <text x="520" y="123" font-size="12" font-weight="700" fill="#22c55e" id="dcs-lt002-val">1550</text>
+
+                    <rect x="710" y="460" width="95" height="34" rx="4" fill="#1a2232" stroke="#f59e0b" stroke-width="1.5"/>
+                    <text x="720" y="474" font-size="9" fill="#94a3b8">FT-001 (M3/H)</text>
+                    <text x="720" y="488" font-size="12" font-weight="700" fill="#f59e0b" id="dcs-ft001-val">795</text>
+                </svg>
+            </div>
+
+            <!-- On-Canvas Telemetry HUD Chips -->
+            <div id="hud-telemetry">
+                <div class="tele-chip">
+                    <div class="tele-label" id="lbl-time">Sim Time</div>
+                    <div class="tele-val" id="val-time">0.0 s</div>
+                </div>
+                <div class="tele-chip">
+                    <div class="tele-label" id="lbl-level">Liquid Level</div>
+                    <div class="tele-val" id="val-level">1550 mm</div>
+                </div>
+                <div class="tele-chip">
+                    <div class="tele-label" id="lbl-pressure">Pressure</div>
+                    <div class="tele-val" id="val-pressure">5.00 barg</div>
+                </div>
+                <div class="tele-chip">
+                    <div class="tele-label" id="lbl-liq-out">Liquid Outflow</div>
+                    <div class="tele-val" id="val-liq-out">795 m³/h</div>
+                </div>
+                <div class="tele-chip">
+                    <div class="tele-label" id="lbl-gas-out">Gas Outflow</div>
+                    <div class="tele-val" id="val-gas-out">71,523 kg/h</div>
+                </div>
+                <div class="tele-chip">
+                    <div class="tele-label" id="lbl-fv001">FV-001 Position</div>
+                    <div class="tele-val" id="val-fv001">52.3%</div>
+                </div>
+                <div class="tele-chip">
+                    <div class="tele-label" id="lbl-pv003b">PV-003B (Gas)</div>
+                    <div class="tele-val" id="val-pv003b">90.0%</div>
+                </div>
+                <div class="tele-chip">
+                    <div class="tele-label" id="lbl-flare">Gas Flared</div>
+                    <div class="tele-val" id="val-flare">0 kg/h</div>
+                </div>
+                <div class="tele-chip">
+                    <div class="tele-label" id="lbl-score">Operator Score</div>
+                    <div class="tele-val" id="val-score" style="color: #22c55e;">1000 pts</div>
+                </div>
+            </div>
+
+            <!-- Startup Banner Notification -->
+            <div id="hud-startup-banner" style="display:none;">
+                <span id="txt-startup-banner">🚀 COLD STARTUP ACTIVE: Vessel Level = 0 mm | Feed = 100 kBOPD | Filling to NLL 1550 mm...</span>
+            </div>
+
+            <!-- Process Phase Legend -->
+            <div id="hud-legend">
+                <span><span class="legend-dot" style="background:#0284c7;"></span><span id="txt-leg-water">Water Layer</span></span>
+                <span><span class="legend-dot" style="background:#d97706;"></span><span id="txt-leg-oil">Crude Oil Layer</span></span>
+                <span><span class="legend-dot" style="background:#f59e0b;"></span><span id="txt-leg-cascade">Schoepentoeter Waterfall</span></span>
+                <span><span class="legend-dot" style="background:#38bdf8;"></span><span id="txt-leg-gas">Vapor Streamlines</span></span>
+                <span><span class="legend-dot" style="background:#ffffff;"></span><span id="txt-leg-bubbles">Degassing Bubbles</span></span>
+            </div>
+
+            <!-- Overrides Slide-out Drawer -->
+            <div id="drawer-overrides">
+                <h4>
+                    <span id="txt-overrides-title">🎛️ Operator Overrides</span>
+                    <span class="drawer-close" onclick="document.getElementById('drawer-overrides').style.display='none'">✕</span>
+                </h4>
+                <div class="override-group">
+                    <label style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;">
+                        <input type="checkbox" id="chk-clamp"> <span id="txt-clamp-desc">Supervisor Clamp Override (Raise 100k Cap)</span>
+                    </label>
+                </div>
+                <div class="override-group">
+                    <div class="override-label">
+                        <label><input type="checkbox" id="chk-fv-man"> <span id="txt-fv-man">FV-001 Manual</span></label>
+                        <span id="val-fv-slider">52.3%</span>
+                    </div>
+                    <input type="range" id="slider-fv001" min="0" max="100" value="52.3" style="width:100%;" disabled>
+                </div>
+                <div class="override-group">
+                    <div class="override-label">
+                        <label><input type="checkbox" id="chk-pv-man"> <span id="txt-pv-man">PV-003B Manual</span></label>
+                        <span id="val-pv-slider">90.0%</span>
+                    </div>
+                    <input type="range" id="slider-pv003b" min="0" max="100" value="90.0" style="width:100%;" disabled>
+                </div>
+            </div>
+
+            <!-- Raycast Inspection Card -->
+            <div id="card-inspect">
+                <h3>
+                    <span id="card-title">Valve Assembly</span>
+                    <span id="card-tag" class="tag">FV-001</span>
+                </h3>
+                <div id="card-desc">Detailed engineering specifications.</div>
+                <div class="card-data-grid" id="card-data"></div>
+            </div>
+        </div>
+
+        <!-- Bottom Controls Dock -->
+        <footer id="dock-bar">
+            <!-- Row 1: Execution & Mission Select -->
+            <div class="dock-row">
+                <div class="dock-group">
+                    <button id="btn-startup" class="btn btn-special">🚀 Startup & Fill</button>
+                    <button id="btn-play" class="btn btn-success">▶️ Run Sim</button>
+                    <button id="btn-step" class="btn">⏭️ Step (+1s)</button>
+                    <button id="btn-reset" class="btn">🔄 Reset</button>
+                    <span style="font-size:11px;color:#94a3b8;margin-left:6px;" id="lbl-speed-txt">Speed:</span>
+                    <select id="sel-speed" style="width:70px;">
+                        <option value="0.5">0.5x</option>
+                        <option value="1.0" selected>1.0x</option>
+                        <option value="2.0">2.0x</option>
+                        <option value="5.0">5.0x</option>
+                    </select>
+                </div>
+
+                <div class="dock-group">
+                    <span style="font-size:11px;color:#94a3b8;" id="lbl-scenario-txt">Mission:</span>
+                    <select id="sel-scenario" style="max-width:330px;">
+                        <option value="SCN-STARTUP">🚀 SCN-00: Cold Startup & Dynamic Fill (ملء من الصفر)</option>
+                        <option value="SCN-01" selected>SCN-01: Normal 100 kBOPD Baseline</option>
+                        <option value="SCN-02">SCN-02: 1.4x Surge Challenge (LAHH Trip Test)</option>
+                        <option value="SCN-03">SCN-03: FV-001 Liquid Valve Stuck Closed</option>
+                        <option value="SCN-04">SCN-04: PV-003B Gas Valve Stuck Locked</option>
+                        <option value="SCN-05">SCN-05: Heavy Crude Transition (Stokes Settling)</option>
+                        <option value="SCN-06">SCN-06: Gas Blow-by Emergency (Note 26)</option>
+                        <option value="SCN-07">SCN-07: Free Sandbox</option>
+                    </select>
+                </div>
+
+                <div class="dock-group">
+                    <button id="btn-cam-front" class="btn" onclick="setCameraView('front')">📐 Front</button>
+                    <button id="btn-cam-back" class="btn" onclick="setCameraView('back')">📐 Back</button>
+                    <button id="btn-cam-iso" class="btn" onclick="setCameraView('iso')">📐 Iso</button>
+                    <button id="btn-cam-top" class="btn" onclick="setCameraView('top')">📐 Top</button>
+                    <button id="btn-cam-gas" class="btn" onclick="setCameraView('gas_deck')">🔍 Gas Deck</button>
+                    <button id="btn-cam-inlet" class="btn" onclick="setCameraView('inlet')">🔍 Inlet</button>
+                    <button id="btn-cam-reset" class="btn">🎯 Reset</button>
+                </div>
+            </div>
+
+            <!-- Row 2: Status & Operator Rating -->
+            <div class="dock-row" style="font-size:10.5px;color:#94a3b8;border-top:1px solid #2d3748;padding-top:4px;">
+                <div id="status-line">
+                    <span id="txt-target-desc">Active Target: Hold NLL at 1550 mm & 5.0 barg | Note 26 Safety Interlock Active</span>
+                </div>
+                <div id="score-line">
+                    <span id="txt-tier" style="font-weight:700;color:#38bdf8;">⭐⭐⭐ Master Console Operator</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+
+    <!-- Vendored Offline Three.js Bundle & Authentic Navisworks IFC4 CAD Meshes -->
+    <script>__THREE_CODE__</script>
+    <script>__CONTROLS_CODE__</script>
+    <script>__NAVIS_MESHES_CODE__</script>
+
+    <script>
+
+        // =========================================================================
+        // 1. LOCALIZATION & CONSTANTS
+        // =========================================================================
+        let isArabic = __IS_ARABIC__;
+
+        const TEXTS = {
+            en: {
+                title: "CP2-V-71101 OTS DIGITAL TWIN",
+                sub: "| 1st Stage Production Separator • BOC Majnoon CPF-2",
+                startup: "🚀 Cold Startup & Fill",
+                run: "▶️ Run Sim",
+                pause: "⏸️ Pause",
+                step: "⏭️ Step (+1s)",
+                reset: "🔄 Reset",
+                camReset: "🎯 Reset",
+                cutawayEdu: "✂️ Cutaway: Full Plant (Educational)",
+                cutawayVessel: "✂️ Cutaway: Vessel Only",
+                cutawaySolid: "🛡️ Solid Exterior",
+                flowContinuous: "🌊 Flow: Continuous CFD",
+                flowParticles: "🫧 Flow: Multiphase Particles",
+                flowOff: "🚫 Flow: OFF",
+                view3d: "🌐 3D Digital Twin",
+                view2d: "📟 2D DCS Console",
+                overrides: "🎛️ Overrides",
+                lang: "🌐 العربية",
+                speed: "Speed:",
+                mission: "Mission:",
+                clampDesc: "Supervisor Clamp Override (Raise 100k Cap)",
+                fvMan: "FV-001 Manual",
+                pvMan: "PV-003B Manual",
+                scoreTierMaster: "⭐⭐⭐ Master Console Operator",
+                scoreTierCert: "⭐⭐ Certified Production Operator",
+                scoreTierQual: "⭐ Qualified Field Operator",
+                scoreTierRetrain: "⚠️ Needs Simulator Retraining",
+                esdReset: "🔓 Execute ESD Manual Reset",
+                startupBannerFilling: "🚀 COLD STARTUP ACTIVE: Vessel Level = {lvl} mm | Feed: 100 kBOPD | Filling to NLL 1550 mm...",
+                startupBannerComplete: "✅ COLD STARTUP COMPLETE: Steady-State Reached at 1550 mm | FV-001 Controlling at 52.3%"
+            },
+            ar: {
+                title: "التوأم الرقمي للعازلة الإنتاجية CP2-V-71101",
+                sub: "| عازلة الإنتاج للمرحلة الأولى • حقل مجنون CPF-2 - شركة نفط البصرة",
+                startup: "🚀 تشغيل وملء من الصفر",
+                run: "▶️ تشغيل المحاكي",
+                pause: "⏸️ إيقاف مؤقت",
+                step: "⏭️ خطوة (+1ث)",
+                reset: "🔄 إعادة ضبط",
+                camReset: "🎯 ضبط الكاميرا",
+                cutawayEdu: "✂️ مقطع عرضي: المحطة بالكامل (تعليمي)",
+                cutawayVessel: "✂️ مقطع عرضي: العازلة فقط",
+                cutawaySolid: "🛡️ المظهر الخارجي المصمت",
+                flowContinuous: "🌊 الجريان: موائع مستمرة (CFD)",
+                flowParticles: "🫧 الجريان: جزيئات متعددة الأطوار",
+                flowOff: "🚫 الجريان: إيقاف",
+                view3d: "🌐 التوأم الرقمي ثلاثي الأبعاد",
+                view2d: "📟 شاشة التحكم DCS",
+                overrides: "🎛️ تجاوزات المشغل",
+                lang: "🌐 English",
+                speed: "السرعة:",
+                mission: "المهمة التدريبية:",
+                clampDesc: "تجاوز حد السعة الأقصى (رفع قيد 100 ألف برميل)",
+                fvMan: "تحكم يدوي FV-001",
+                pvMan: "تحكم يدوي PV-003B",
+                scoreTierMaster: "⭐⭐⭐ مشغل غرفة تحكم محترف (خبير)",
+                scoreTierCert: "⭐⭐ مشغل إنتاج معتمد (كفء)",
+                scoreTierQual: "⭐ مشغل موقع مؤهل",
+                scoreTierRetrain: "⚠️ بحاجة لإعادة تدريب على المحاكي",
+                esdReset: "🔓 تصفير وإعادة تعيين منظومة ESD",
+                startupBannerFilling: "🚀 جاري التشغيل والملء من الصفر: مستوى السائل = {lvl} ملم | التغذية: 100 ألف برميل/يوم...",
+                startupBannerComplete: "✅ اكتمل تشغيل وملء العازلة: استقرار المستوى عند 1550 ملم وصمام FV-001 يعمل بنسبة 52.3%"
+            }
+        };
+
+        // Separator Physical Geometry (Sulzer Chemtech Drawing MGP1-POMJ0S0006-B01-0001)
+        const VESSEL_D = 4.2;      // Inside Diameter in meters
+        const VESSEL_R = 2.1;      // Radius in meters
+        const VESSEL_L = 13.6;     // Length Tan-to-Tan in meters
+        const A_TOTAL = Math.PI * VESSEL_R * VESSEL_R; // 13.854 m2
+        const TOTAL_VOL = A_TOTAL * VESSEL_L;          // 188.42 m3
+        const CAP_100KBOPD = 794.94; // m3/h liquid capacity
+
+        // Alarm & Trip Setpoints (Datasheet & GA Drawing)
+        const LVL_LAHH = 2700.0; // mm (Trip High)
+        const LVL_LAH  = 2350.0; // mm (Alarm High)
+        const LVL_NLL  = 1550.0; // mm (Normal Liquid Level)
+        const LVL_LAL  = 1050.0; // mm (Alarm Low)
+        const LVL_LALL = 770.0;  // mm (Trip Low - Note 26 Interlock)
+
+        const P_SET  = 5.00;     // barg (PIC-003 Normal Operating Pressure)
+        const P_TRIP = 15.00;    // barg (Design Pressure 17 barg)
+
+        // Control Valve Capacities (Koso Certified Datasheets)
+        const CV_FV001  = 2140.0; // 14" Koso S1200 Globe (Linear)
+        const CV_PV003B = 3990.0; // 14" Koso AB4001 Butterfly
+        const CV_PV003A = 1170.0; // 14" Koso S1200 Flare Valve (with acoustic baffle)
+
+        // Simulation Dynamic State
+        let sim = {
+            running: false,
+            time_s: 0.0,
+            speed: 1.0,
+            is_startup_mode: false,
+
+            // Dynamic Hydraulics
+            level_m: 1.55,           // Liquid height in meters
+            level_mm: 1550.0,        // Liquid height in mm
+            pressure_barg: 5.00,     // Operating gas pressure
+            feed_liq_m3_h: CAP_100KBOPD,
+            feed_gas_kg_h: 71523.0,
+            out_liq_m3_h: CAP_100KBOPD,
+            out_gas_header_kg_h: 71523.0,
+            out_gas_flare_kg_h: 0.0,
+            water_cut: 0.20,         // 20% water cut
+
+            // Valve Positions (0 - 100%)
+            fv001_pct: 52.3,
+            fv001_target: 0.523,
+            fv001_manual: false,
+
+            pv003b_pct: 90.0,
+            pv003b_target: 0.90,
+            pv003b_manual: false,
+
+            pv003a_pct: 0.0,
+            pv003a_target: 0.0,
+
+            // Emergency Shutdown Valves (SDVs)
+            uzv051_open: true,
+            uzv052_open: true,
+            uzv002_open: true,
+            uzv003_open: true,
+            zsc002_closed: false,
+
+            // Safety Interlocks & Alarms
+            note26_tripped: false,
+            alarm_status: "NORMAL",
+            tripped_causes: [],
+            total_flared_kg: 0.0,
+            clamp_override: false,
+            score: 1000.0,
+
+            // Visual Settings
+            current_view: "3D",
+            cutaway_mode: 0, // 0 = Full Educational, 1 = Vessel Only, 2 = Solid
+            cfd_mode: 0      // 0 = Continuous CFD (Waterfalls & Ripples), 1 = Multiphase Particles, 2 = OFF
+        };
+
+        let lica_integral = 0.0;
+        let fic_integral = 0.0;
+        let pic_integral = 0.0;
+
+        function resetSimulation(isStartup = false) {
+            sim.time_s = 0.0;
+            sim.is_startup_mode = isStartup;
+            if (isStartup) {
+                sim.level_m = 0.00;
+                sim.level_mm = 0.0;
+                sim.pressure_barg = 0.20;
+                sim.feed_liq_m3_h = CAP_100KBOPD;
+                sim.feed_gas_kg_h = 71523.0;
+                sim.out_liq_m3_h = 0.0;
+                sim.out_gas_header_kg_h = 0.0;
+                sim.out_gas_flare_kg_h = 0.0;
+                sim.fv001_pct = 0.0;
+                sim.fv001_target = 0.0;
+                sim.pv003b_pct = 5.0;
+                sim.pv003b_target = 0.05;
+                sim.pv003a_pct = 0.0;
+                sim.pv003a_target = 0.0;
+                sim.uzv051_open = true;
+                sim.uzv052_open = true;
+                sim.uzv002_open = true;
+                sim.uzv003_open = true;
+                sim.zsc002_closed = false;
+                sim.alarm_status = "LALL TRIP (FILLING)";
+                sim.speed = 2.0; // Fast-forward filling for great OTS experience
+                const selSpeed = document.getElementById('sel-speed');
+                if (selSpeed) selSpeed.value = "2.0";
+                sim.running = true; // Auto-start filling!
+            } else {
+                sim.level_m = 1.55;
+                sim.level_mm = 1550.0;
+                sim.pressure_barg = 5.00;
+                sim.feed_liq_m3_h = CAP_100KBOPD;
+                sim.feed_gas_kg_h = 71523.0;
+                sim.out_liq_m3_h = CAP_100KBOPD;
+                sim.out_gas_header_kg_h = 71523.0;
+                sim.out_gas_flare_kg_h = 0.0;
+                sim.fv001_pct = 52.3;
+                sim.fv001_target = 0.523;
+                sim.pv003b_pct = 90.0;
+                sim.pv003b_target = 0.90;
+                sim.pv003a_pct = 0.0;
+                sim.pv003a_target = 0.0;
+                sim.uzv051_open = true;
+                sim.uzv052_open = true;
+                sim.uzv002_open = true;
+                sim.uzv003_open = true;
+                sim.zsc002_closed = false;
+                sim.alarm_status = "NORMAL";
+                sim.speed = 1.0;
+                const selSpeed = document.getElementById('sel-speed');
+                if (selSpeed) selSpeed.value = "1.0";
+            }
+            sim.total_flared_kg = 0.0;
+            sim.tripped_causes = [];
+            sim.score = 1000.0;
+            lica_integral = 0.0;
+            fic_integral = 0.0;
+            pic_integral = 0.0;
+            updateUI();
+        }
+
+        window.triggerColdStartup = function() {
+            const selScn = document.getElementById('sel-scenario');
+            if (selScn) selScn.value = "SCN-STARTUP";
+            applyScenario("SCN-STARTUP");
+        };
+
+        function applyScenario(scn) {
+            resetSimulation(scn === "SCN-STARTUP");
+            if (scn === "SCN-02") {
+                sim.feed_liq_m3_h = CAP_100KBOPD * 1.40;
+            } else if (scn === "SCN-03") {
+                sim.fv001_manual = true;
+                sim.fv001_target = 0.0;
+                sim.fv001_pct = 0.0;
+            } else if (scn === "SCN-04") {
+                sim.pv003b_manual = true;
+                sim.pv003b_target = 0.10;
+                sim.pv003b_pct = 10.0;
+            } else if (scn === "SCN-05") {
+                sim.water_cut = 0.45;
+            } else if (scn === "SCN-06") {
+                sim.level_m = 0.70;
+                sim.level_mm = 700.0;
+                sim.uzv002_open = true;
+            }
+        }
+
+        function physicsStep(dt) {
+            sim.time_s += dt;
+
+            // Geometry cross-section surface area A_surf = 2 * L * sqrt(R^2 - (R - h)^2)
+            const h = Math.max(0.005, Math.min(VESSEL_D - 0.01, sim.level_m));
+            const y_from_center = Math.abs(VESSEL_R - h);
+            const half_width = Math.sqrt(Math.max(0.01, VESSEL_R * VESSEL_R - y_from_center * y_from_center));
+            const a_surf = Math.max(1.0, 2.0 * half_width * VESSEL_L);
+
+            // Startup mode transition check
+            if (sim.is_startup_mode) {
+                if (sim.level_mm < LVL_LALL) {
+                    sim.alarm_status = "LALL TRIP (FILLING)";
+                    sim.fv001_target = 0.0;
+                    sim.pv003b_target = 0.10;
+                } else if (sim.level_mm < LVL_LAL) {
+                    sim.alarm_status = "LAL (FILLING)";
+                    sim.fv001_target = 0.05;
+                    sim.pv003b_target = 0.35;
+                } else if (sim.level_mm < LVL_NLL) {
+                    sim.alarm_status = "FILLING TO NLL";
+                    sim.fv001_target = 0.25;
+                    sim.pv003b_target = 0.70;
+                } else {
+                    // Reached NLL! Smoothly transition to normal steady state!
+                    sim.is_startup_mode = false;
+                    sim.alarm_status = "NORMAL";
+                }
+            }
+
+            // --- 1. Cascade Controls (Normal Operation) ---
+            if (!sim.is_startup_mode) {
+                // Level Control (LICA-002 -> FIC-001)
+                const l_err = sim.level_mm - LVL_NLL;
+                lica_integral += l_err * dt;
+                const max_flow = sim.clamp_override ? 1400.0 : CAP_100KBOPD;
+                let flow_sp = CAP_100KBOPD + 0.75 * l_err + 0.015 * lica_integral;
+                if (flow_sp > max_flow) { flow_sp = max_flow; lica_integral -= l_err * dt; }
+                if (flow_sp < 0.0) { flow_sp = 0.0; lica_integral -= l_err * dt; }
+
+                const f_err = flow_sp - sim.out_liq_m3_h;
+                fic_integral += f_err * dt;
+                let fic_op = 52.3 + 0.06 * f_err + 0.012 * fic_integral;
+                fic_op = Math.max(0.0, Math.min(100.0, fic_op));
+
+                if (!sim.fv001_manual) {
+                    sim.fv001_target = fic_op / 100.0;
+                }
+
+                // Pressure Control (PIC-003) -> Split Range
+                const p_err = sim.pressure_barg - P_SET;
+                pic_integral += p_err * dt;
+                let pic_op = 45.0 + 15.0 * p_err + 0.5 * pic_integral;
+                pic_op = Math.max(0.0, Math.min(100.0, pic_op));
+
+                if (!sim.pv003b_manual) {
+                    if (pic_op <= 50.0) {
+                        sim.pv003b_target = pic_op / 50.0;
+                        sim.pv003a_target = 0.0;
+                    } else {
+                        sim.pv003b_target = 1.0;
+                        sim.pv003a_target = (pic_op - 50.0) / 50.0;
+                    }
+                }
+            }
+
+            // Valve Actuator Slew Rate (10% / sec)
+            const slew = 0.10 * dt;
+            sim.fv001_pct += Math.max(-slew * 100, Math.min(slew * 100, (sim.fv001_target * 100) - sim.fv001_pct));
+            sim.pv003b_pct += Math.max(-slew * 100, Math.min(slew * 100, (sim.pv003b_target * 100) - sim.pv003b_pct));
+            sim.pv003a_pct += Math.max(-slew * 100, Math.min(slew * 100, (sim.pv003a_target * 100) - sim.pv003a_pct));
+
+            // --- 2. Outflow Hydraulics ---
+            const cv_actual = CV_FV001 * (sim.fv001_pct / 100.0);
+            const dp_liq = Math.max(0.01, sim.pressure_barg - 2.0);
+            if (sim.uzv002_open && cv_actual > 0.5 && sim.level_mm > 100.0) {
+                sim.out_liq_m3_h = (cv_actual / 4.40287) * Math.sqrt((dp_liq * 14.5038) / 0.89);
+            } else {
+                sim.out_liq_m3_h = 0.0;
+            }
+
+            // --- 3. Dynamic Liquid Accumulation (dh/dt) ---
+            const q_in_m3_s = (sim.uzv051_open && sim.uzv052_open) ? (sim.feed_liq_m3_h / 3600.0) : 0.0;
+            const q_out_m3_s = sim.out_liq_m3_h / 3600.0;
+            const dh = ((q_in_m3_s - q_out_m3_s) / a_surf) * dt;
+
+            sim.level_m += dh;
+            sim.level_m = Math.max(0.00, Math.min(VESSEL_D - 0.02, sim.level_m));
+            sim.level_mm = sim.level_m * 1000.0;
+
+            // --- 4. Gas Outflows & Pressure Dynamics ---
+            const k_head = (CV_PV003B * (sim.pv003b_pct / 100.0)) * 25.0;
+            const k_flare = (CV_PV003A * (sim.pv003a_pct / 100.0)) * 25.0;
+            sim.out_gas_header_kg_h = sim.uzv003_open ? (k_head * Math.sqrt(Math.max(0.01, sim.pressure_barg))) : 0.0;
+            sim.out_gas_flare_kg_h = k_flare * Math.sqrt(Math.max(0.01, sim.pressure_barg));
+
+            const m_gas_in = sim.feed_gas_kg_h / 3600.0;
+            const m_gas_out = (sim.out_gas_header_kg_h + sim.out_gas_flare_kg_h) / 3600.0;
+            const v_vapor = Math.max(10.0, TOTAL_VOL - (sim.level_m * A_TOTAL));
+            const dp = ((m_gas_in - m_gas_out) * 0.45 / v_vapor) * dt;
+            sim.pressure_barg += dp;
+            sim.pressure_barg = Math.max(0.10, sim.pressure_barg);
+
+            // Accumulate flaring
+            sim.total_flared_kg += (sim.out_gas_flare_kg_h / 3600.0) * dt;
+
+            // --- 5. Safety Interlocks & P&ID Note 26 ---
+            if (!sim.is_startup_mode) {
+                if (sim.level_mm <= LVL_LALL) {
+                    // P&ID Note 26 Gas Blow-by Interlock
+                    sim.uzv002_open = false;
+                    sim.uzv003_open = false;
+                    sim.zsc002_closed = true;
+                    sim.note26_tripped = true;
+                    sim.alarm_status = "NOTE 26 INTERLOCK TRIP";
+                    if (!sim.tripped_causes.includes("Note 26 Blow-by")) sim.tripped_causes.push("Note 26 Blow-by");
+                }
+                if (sim.level_mm >= LVL_LAHH) {
+                    sim.uzv003_open = false;
+                    sim.alarm_status = "LAHH TRIP (OVERFILL)";
+                    if (!sim.tripped_causes.includes("LAHH Overfill")) sim.tripped_causes.push("LAHH Overfill");
+                }
+                if (sim.pressure_barg >= P_TRIP) {
+                    sim.alarm_status = "PAHH TRIP (OVERPRESSURE)";
+                    if (!sim.tripped_causes.includes("PAHH Overpressure")) sim.tripped_causes.push("PAHH Overpressure");
+                }
+            }
+
+            // Score Penalties
+            if (sim.alarm_status !== "NORMAL" && !sim.is_startup_mode) {
+                sim.score = Math.max(0, sim.score - dt * 2.5);
+            }
+            if (sim.out_gas_flare_kg_h > 10.0) {
+                sim.score = Math.max(0, sim.score - dt * 0.8);
+            }
+        }
+
+
+        // =========================================================================
+        // 2. THREE.JS SCENE SETUP & STUDIO LIGHTING
+        // =========================================================================
+        const view3d = document.getElementById('view-3d');
+        const scene = new THREE.Scene();
+        // High-contrast clean engineering studio background
+        scene.background = new THREE.Color(0x151c28);
+
+        const camera = new THREE.PerspectiveCamera(42, view3d.clientWidth / view3d.clientHeight, 0.1, 1000);
+        camera.position.set(0, 4.0, 18.0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setSize(view3d.clientWidth, view3d.clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.localClippingEnabled = true; // Essential for educational cutaway and cylindrical fluid slicing
+        view3d.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.target.set(0, 0, 0);
+        controls.maxPolarAngle = Math.PI / 2 + 0.05;
+
+        // --- Studio Lighting Setup (Bright High-Contrast Industrial Studio) ---
+        const keyLight = new THREE.DirectionalLight(0xfff8ee, 1.6);
+        keyLight.position.set(15, 25, 20);
+        keyLight.castShadow = true;
+        keyLight.shadow.mapSize.width = 2048;
+        keyLight.shadow.mapSize.height = 2048;
+        keyLight.shadow.bias = -0.0001;
+        scene.add(keyLight);
+
+        const fillLight = new THREE.DirectionalLight(0x93c5fd, 1.0);
+        fillLight.position.set(-15, 12, -15);
+        scene.add(fillLight);
+
+        const rimBlueLight = new THREE.DirectionalLight(0x38bdf8, 0.85);
+        rimBlueLight.position.set(0, -5, -20);
+        scene.add(rimBlueLight);
+
+        const ambLight = new THREE.AmbientLight(0xffffff, 0.70);
+        scene.add(ambLight);
+
+        // CLIPPING PLANES
+        // 1. Universal Educational Cutaway Plane (cuts along Z = 0 when active)
+        const educationalClipPlane = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0.0);
+
+        // 2. Dynamic Liquid Conformance Clipping Planes
+        const waterTopClipPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), -VESSEL_R + 0.31);
+        const oilTopClipPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), -VESSEL_R + 1.55);
+        const oilBottomClipPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -(-VESSEL_R + 0.31));
+
+        // High-Visibility Engineering Materials (Matching Official Navisworks Model)
+        // Vessel Shell: Authentic light mauve-silver insulated finish
+        const vesselSteelMat = new THREE.MeshStandardMaterial({
+            color: 0xd2cdd5,
+            metalness: 0.55,
+            roughness: 0.24,
+            side: THREE.DoubleSide
+        });
+
+        const chromeTrimMat = new THREE.MeshStandardMaterial({
+            color: 0xf1f5f9,
+            metalness: 0.95,
+            roughness: 0.15
+        });
+
+        // Process Piping: Vibrant Navisworks Teal/Cyan Process Blue (P-711001 / P-711009)
+        const pipeMat = new THREE.MeshStandardMaterial({
+            color: 0x00acc1,
+            metalness: 0.78,
+            roughness: 0.22,
+            side: THREE.DoubleSide
+        });
+
+        const gasPipeMat = new THREE.MeshStandardMaterial({
+            color: 0x00acc1,
+            metalness: 0.78,
+            roughness: 0.22,
+            side: THREE.DoubleSide
+        });
+
+        const gasValveBodyMat = new THREE.MeshStandardMaterial({
+            color: 0x1d4ed8, // Koso signature industrial blue
+            metalness: 0.82,
+            roughness: 0.28,
+            side: THREE.DoubleSide
+        });
+
+        const gasFlareValveMat = new THREE.MeshStandardMaterial({
+            color: 0xdc2626,
+            metalness: 0.75,
+            roughness: 0.35,
+            side: THREE.DoubleSide
+        });
+
+        const liqPipeMat = new THREE.MeshStandardMaterial({
+            color: 0x0097a7,
+            metalness: 0.80,
+            roughness: 0.24,
+            side: THREE.DoubleSide
+        });
+
+        const feedPipeMat = new THREE.MeshStandardMaterial({
+            color: 0x0288d1, // Blue insulated 30" feed line (P-711101)
+            metalness: 0.75,
+            roughness: 0.25,
+            side: THREE.DoubleSide
+        });
+
+        const flarePipeMat = new THREE.MeshStandardMaterial({
+            color: 0xdc2626,
+            metalness: 0.75,
+            roughness: 0.35,
+            side: THREE.DoubleSide
+        });
+
+        const glassCutawayMat = new THREE.MeshPhysicalMaterial({
+            color: 0xe0f2fe,
+            transparent: true,
+            opacity: 0.25,
+            transmission: 0.92,
+            roughness: 0.10,
+            metalness: 0.08,
+            side: THREE.DoubleSide
+        });
+
+        // Structural Steel: Navisworks Industrial Structural Steel Blue
+        const structSteelMat = new THREE.MeshStandardMaterial({
+            color: 0x2b6cb0,
+            metalness: 0.72,
+            roughness: 0.32
+        });
+
+        const skidSteelMat = new THREE.MeshStandardMaterial({
+            color: 0x334155,
+            metalness: 0.75,
+            roughness: 0.40
+        });
+
+        const concretePedMat = new THREE.MeshStandardMaterial({
+            color: 0x475569,
+            roughness: 0.92,
+            metalness: 0.08
+        });
+
+        const safetyYellowMat = new THREE.MeshStandardMaterial({
+            color: 0xfacc15,
+            roughness: 0.35,
+            metalness: 0.20
+        });
+
+        const galvGratingMat = new THREE.MeshStandardMaterial({
+            color: 0x64748b,
+            roughness: 0.65,
+            metalness: 0.60
+        });
+
+        const ss316Mat = new THREE.MeshStandardMaterial({
+            color: 0xe2e8f0,
+            roughness: 0.20,
+            metalness: 0.90
+        });
+
+        const valveBodyMat = new THREE.MeshStandardMaterial({
+            color: 0x1d4ed8, // Koso signature industrial blue
+            metalness: 0.82,
+            roughness: 0.28,
+            side: THREE.DoubleSide
+        });
+
+        const actuatorOrangeMat = new THREE.MeshStandardMaterial({
+            color: 0xf97316, // Safety orange for control valve actuators
+            metalness: 0.60,
+            roughness: 0.30
+        });
+
+        const actuatorYellowMat = new THREE.MeshStandardMaterial({
+            color: 0xeab308, // Safety yellow for ESD Scotch-yoke actuators
+            metalness: 0.60,
+            roughness: 0.30
+        });
+
+        // Woven Wire Mesh Demister Material (KM N3)
+        const wireMeshMat = new THREE.MeshStandardMaterial({
+            color: 0xd0dbe5,
+            metalness: 0.95,
+            roughness: 0.22,
+            transparent: true,
+            opacity: 0.65,
+            side: THREE.DoubleSide
+        });
+
+        // Conforming Cylindrical Fluid Materials
+        const waterMat = new THREE.MeshStandardMaterial({
+            color: 0x0284c7, // Marine blue
+            transparent: true,
+            opacity: 0.88,
+            roughness: 0.08,
+            metalness: 0.12,
+            side: THREE.DoubleSide,
+            clippingPlanes: [waterTopClipPlane, educationalClipPlane]
+        });
+
+        const oilMat = new THREE.MeshStandardMaterial({
+            color: 0xd97706, // Rich golden-amber crude
+            transparent: true,
+            opacity: 0.88,
+            roughness: 0.12,
+            metalness: 0.15,
+            side: THREE.DoubleSide,
+            clippingPlanes: [oilTopClipPlane, oilBottomClipPlane, educationalClipPlane]
+        });
+
+        // Schoepentoeter Knockout Waterfall Cascades Material
+        const waterfallMat = new THREE.MeshStandardMaterial({
+            color: 0xf59e0b,
+            transparent: true,
+            opacity: 0.82,
+            roughness: 0.20,
+            metalness: 0.10,
+            side: THREE.DoubleSide
+        });
+
+        // Raycasting Registry
+        const interactables = [];
+        function registerInteractable(mesh, data) {
+            mesh.userData = data;
+            interactables.push(mesh);
+        }
+
+        // Master Vessel Group
+        const vesselGroup = new THREE.Group();
+        scene.add(vesselGroup);
+
+        const L = VESSEL_L;
+        const R = VESSEL_R;
+        const R_IN = R - 0.02; // Shell inner radius
+
+        // =========================================================================
+        // 3. FOUNDATION AT FINISHED GROUND LEVEL (Navisworks Plant Grade y = -4.62m)
+        // =========================================================================
+        const FGL_Y = -4.62;
+
+        // Concrete Foundation Slab (42m x 28m)
+        const groundGeom = new THREE.PlaneGeometry(42, 28);
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x18202c, roughness: 0.92, metalness: 0.10 });
+        const groundMesh = new THREE.Mesh(groundGeom, groundMat);
+        groundMesh.rotation.x = -Math.PI / 2;
+        groundMesh.position.y = FGL_Y;
+        groundMesh.receiveShadow = true;
+        vesselGroup.add(groundMesh);
+
+        // Ground Grid demarcation lines
+        const gridHelper = new THREE.GridHelper(42, 42, 0x38bdf8, 0x243044);
+        gridHelper.position.y = FGL_Y + 0.005;
+        vesselGroup.add(gridHelper);
+
+        // Yellow Perimeter Safety Border Marking
+        const yellowLineMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
+        const borderGeom = new THREE.RingGeometry(18.8, 19.0, 4);
+        const borderMesh = new THREE.Mesh(borderGeom, yellowLineMat);
+        borderMesh.rotation.x = -Math.PI / 2;
+        borderMesh.rotation.z = Math.PI / 4;
+        borderMesh.position.set(0, FGL_Y + 0.01, 0);
+        vesselGroup.add(borderMesh);
+
+        // Concrete Saddle Pedestal Piers (Extending from FGL_Y = -4.62m up to Navisworks Saddle Baseplates at y = -1.35m)
+        [-4.8, 4.8].forEach(sx => {
+            const pierH = 3.27;
+            const pier = new THREE.Mesh(new THREE.BoxGeometry(1.10, pierH, 3.80), concretePedMat);
+            pier.position.set(sx, FGL_Y + pierH / 2, 0);
+            pier.receiveShadow = true;
+            vesselGroup.add(pier);
+        });
+
+        // Skid Steel Foundation Frame (Procedural fallback)
+        const skidGeom = new THREE.BoxGeometry(L * 1.08, 0.22, 4.4);
+        const skidMesh = new THREE.Mesh(skidGeom, skidSteelMat);
+        skidMesh.position.set(0, -R - 0.70, 0);
+        vesselGroup.add(skidMesh);
+
+        // SADDLES PER GA DRAWING MGP1-CP2-PIL-MP-4033-0197 (Span = 9,600 mm)
+        const saddleSpan = 9.6;
+        const saddleX = saddleSpan / 2; // -4.8m and +4.8m
+
+        // 1. FIXED SADDLE (Feed End, x = -4.8m, Coordinate N - 629.950)
+        const fixedSaddleGroup = new THREE.Group();
+        fixedSaddleGroup.position.set(-saddleX, 0, 0);
+
+        const fixedPed = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.40, 4.8), concretePedMat);
+        fixedPed.position.y = FGL_Y + 0.20;
+        fixedSaddleGroup.add(fixedPed);
+
+        const fixedBase = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.08, 4.3), skidSteelMat);
+        fixedBase.position.y = -2.56;
+        fixedSaddleGroup.add(fixedBase);
+
+        const fixedCradle = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.46, 4.2), skidSteelMat);
+        fixedCradle.position.y = -2.31;
+        fixedSaddleGroup.add(fixedCradle);
+
+        [-0.5, 0.5].forEach(bx => {
+            [-1.9, 1.9].forEach(bz => {
+                const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.35, 12), chromeTrimMat);
+                bolt.position.set(bx, -2.50, bz);
+                fixedSaddleGroup.add(bolt);
+            });
+        });
+
+        [-1.6, -0.8, 0, 0.8, 1.6].forEach(gz => {
+            const gusset = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.42, 0.04), skidSteelMat);
+            gusset.position.set(0, -2.31, gz);
+            fixedSaddleGroup.add(gusset);
+        });
+        vesselGroup.add(fixedSaddleGroup);
+
+        registerInteractable(fixedCradle, {
+            tag: "FIXED SADDLE (N - 629.950)",
+            title_en: "Vessel Fixed Support Saddle (ASME VIII Div 1)",
+            title_ar: "قاعدة التثبيت الرئيسية الثابتة للعازلة",
+            desc_en: "Rigid structural saddle anchoring separator at coordinate N - 629.950, absorbing longitudinal thermal reaction forces.",
+            desc_ar: "قاعدة فولاذية صلبة مثبتة ببراغي M48 تثبت العازلة عند الإحداثي N - 629.950 وتتحمل قوى التمدد الطولية للمعدة.",
+            data: [
+                { label: "Coordinate", val: "N - 629.950" },
+                { label: "Type", val: "Fixed Support" },
+                { label: "Span to Slide", val: "9,600 mm" },
+                { label: "Material", val: "ASTM A516 Gr.70" }
+            ]
+        });
+
+        // 2. SLIDING SADDLE (Outflow End, x = +4.8m, Coordinate N - 639.550)
+        const slideSaddleGroup = new THREE.Group();
+        slideSaddleGroup.position.set(saddleX, 0, 0);
+
+        const slidePed = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.40, 4.8), concretePedMat);
+        slidePed.position.y = FGL_Y + 0.20;
+        slideSaddleGroup.add(slidePed);
+
+        const ptfePlate = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.03, 4.3), chromeTrimMat);
+        ptfePlate.position.y = -2.58;
+        slideSaddleGroup.add(ptfePlate);
+
+        const slideBase = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.08, 4.3), skidSteelMat);
+        slideBase.position.y = -2.53;
+        slideSaddleGroup.add(slideBase);
+
+        const slideCradle = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.46, 4.2), skidSteelMat);
+        slideCradle.position.y = -2.31;
+        slideSaddleGroup.add(slideCradle);
+
+        [-0.5, 0.5].forEach(bx => {
+            [-1.9, 1.9].forEach(bz => {
+                const slot = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.02, 0.08), chromeTrimMat);
+                slot.position.set(bx, -2.48, bz);
+                slideSaddleGroup.add(slot);
+                const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.35, 12), chromeTrimMat);
+                bolt.position.set(bx, -2.50, bz);
+                slideSaddleGroup.add(bolt);
+            });
+        });
+
+        [-1.6, -0.8, 0, 0.8, 1.6].forEach(gz => {
+            const gusset = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.42, 0.04), skidSteelMat);
+            gusset.position.set(0, -2.31, gz);
+            slideSaddleGroup.add(gusset);
+        });
+        vesselGroup.add(slideSaddleGroup);
+
+        registerInteractable(slideCradle, {
+            tag: "SLIDING SADDLE (N - 639.550)",
+            title_en: "Vessel Sliding Support Saddle (PTFE Teflon Pad)",
+            title_ar: "قاعدة الانزلاق والتمدد الحراري للعازلة",
+            desc_en: "Expansion saddle with low-friction PTFE slide pad and slotted holes allowing +/-35 mm free longitudinal thermal expansion.",
+            desc_ar: "قاعدة انزلاقية مزودة ببطانة تفلون منخفضة الاحتكاك وفتحات بيضاوية تتيح تمدد وانكماش العازلة بحرية حتى 35 ملم.",
+            data: [
+                { label: "Coordinate", val: "N - 639.550" },
+                { label: "Type", val: "Sliding Expansion" },
+                { label: "Slide Pad", val: "Virgin PTFE / Teflon" },
+                { label: "Expansion", val: "+/- 35 mm travel" }
+            ]
+        });
+
+        // =========================================================================
+        // 4. VESSEL SHELL (Solid Light Aluminum Cladding Rear, Cutaway Front)
+        // =========================================================================
+        // Rear Shell (180 to 360 deg) - Solid Opaque Light Industrial Cladding
+        const shellBackGeom = new THREE.CylinderGeometry(R, R, L, 48, 1, false, Math.PI * 0.5, Math.PI);
+        const shellBackMesh = new THREE.Mesh(shellBackGeom, vesselSteelMat);
+        shellBackMesh.rotation.z = Math.PI / 2;
+        vesselGroup.add(shellBackMesh);
+
+        // Front Cutaway Shell (0 to 180 deg)
+        const shellCutGeom = new THREE.CylinderGeometry(R, R, L, 48, 1, true, -Math.PI * 0.5, Math.PI);
+        const shellCutMesh = new THREE.Mesh(shellCutGeom, glassCutawayMat);
+        shellCutMesh.rotation.z = Math.PI / 2;
+        shellCutMesh.visible = false; // Mode 0 default: open educational cutaway
+        vesselGroup.add(shellCutMesh);
+
+        // Chrome Cut Flange Trim (Top & Bottom Rim of cutaway opening)
+        [-1, 1].forEach(sign => {
+            const trimGeom = new THREE.BoxGeometry(L, 0.08, 0.08);
+            const trimMesh = new THREE.Mesh(trimGeom, chromeTrimMat);
+            trimMesh.position.set(0, 0, sign * R);
+            vesselGroup.add(trimMesh);
+        });
+
+        // Circumferential Stiffener Rings (3 heavy structural rings)
+        [-L * 0.35, 0, L * 0.35].forEach(x => {
+            const ringGeom = new THREE.TorusGeometry(R + 0.03, 0.04, 16, 48, Math.PI);
+            const ringMesh = new THREE.Mesh(ringGeom, chromeTrimMat);
+            ringMesh.position.set(x, 0, 0);
+            ringMesh.rotation.y = Math.PI / 2;
+            ringMesh.rotation.x = Math.PI / 2;
+            vesselGroup.add(ringMesh);
+        });
+
+        // 2:1 Semi-Ellipsoidal Heads
+        // Left Head (Feed End -X)
+        const headGeomL = new THREE.SphereGeometry(R, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.5);
+        const headL = new THREE.Mesh(headGeomL, vesselSteelMat);
+        headL.rotation.z = Math.PI / 2;
+        headL.scale.set(1, 0.5, 1);
+        headL.position.x = -L / 2;
+        vesselGroup.add(headL);
+
+        // Right Head (Outflow End +X)
+        const headGeomR = new THREE.SphereGeometry(R, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.5);
+        const headR = new THREE.Mesh(headGeomR, vesselSteelMat);
+        headR.rotation.z = -Math.PI / 2;
+        headR.scale.set(1, 0.5, 1);
+        headR.position.x = L / 2;
+        vesselGroup.add(headR);
+
+        // 24" Inspection Manway M1B on Left Head (y = -0.50m below CL per GA)
+        const manwayGroup = new THREE.Group();
+        manwayGroup.position.set(-L / 2 - 0.35, -0.50, -R * 0.4);
+        const manwayNeck = new THREE.Mesh(new THREE.CylinderGeometry(0.30, 0.30, 0.5, 24), vesselSteelMat);
+        manwayNeck.rotation.z = Math.PI / 2;
+        manwayGroup.add(manwayNeck);
+        const manwayBlind = new THREE.Mesh(new THREE.CylinderGeometry(0.40, 0.40, 0.1, 24), chromeTrimMat);
+        manwayBlind.rotation.z = Math.PI / 2;
+        manwayBlind.position.x = -0.28;
+        manwayGroup.add(manwayBlind);
+        vesselGroup.add(manwayGroup);
+
+
+        // =========================================================================
+        // 5. P&ID TRANSMITTERS & INSTRUMENTATION SUITE
+        // =========================================================================
+        // 1. Level Bridle & Magnetrol 706 Guided Wave Radar (LT-002 / LIT-001)
+        const bridleGroup = new THREE.Group();
+        bridleGroup.position.set(-L / 2 + 1.2, 0, R + 0.45);
+
+        const bridleCol = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 3.4, 20), pipeMat);
+        bridleGroup.add(bridleCol);
+
+        [-1.4, 1.4].forEach(py => {
+            const conn = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.45, 16), pipeMat);
+            conn.rotation.x = Math.PI / 2;
+            conn.position.set(0, py, -0.22);
+            bridleGroup.add(conn);
+        });
+
+        // Magnetrol 706 Radar Transmitter Head
+        const radarHead = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.28, 20), new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.8, roughness: 0.2 }));
+        radarHead.position.y = 1.85;
+        bridleGroup.add(radarHead);
+
+        const radarLcd = new THREE.Mesh(new THREE.PlaneGeometry(0.08, 0.05), new THREE.MeshBasicMaterial({ color: 0x00e5ff }));
+        radarLcd.position.set(0, 1.85, 0.125);
+        bridleGroup.add(radarLcd);
+
+        // Magnetic Level Indicator Flag Flapper Chamber (LIT-001)
+        const flagHousing = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.6, 0.06), new THREE.MeshStandardMaterial({ color: 0xf1f5f9, metalness: 0.85, roughness: 0.25 }));
+        flagHousing.position.set(0.12, 0, 0);
+        bridleGroup.add(flagHousing);
+
+        const floatMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.08, 16), new THREE.MeshStandardMaterial({ color: 0xef4444 }));
+        floatMesh.position.set(0.12, 0, 0);
+        bridleGroup.add(floatMesh);
+        vesselGroup.add(bridleGroup);
+
+        registerInteractable(radarHead, {
+            tag: "LT-002 (GWR 706)",
+            title_en: "Magnetrol 706 Guided Wave Radar Transmitter",
+            title_ar: "مرسلة قياس المستوى الرادارية الموجهة (ماجنترول)",
+            desc_en: "High-accuracy TDR guided wave radar measuring crude oil total level and oil-water interface level.",
+            desc_ar: "مرسلة رادارية عالية الدقة تقيس المستوى الكلي ومستوى السطح الفاصل بين النفط والماء وترسل القراءة للـ DCS.",
+            data: [
+                { label: "Model", val: "Magnetrol Eclipse 706" },
+                { label: "Probe", val: "Coaxial SS316 3.2m" },
+                { label: "Accuracy", val: "+/- 1.5 mm" }
+            ]
+        });
+
+        // 2. Pressure Transmitter PT-001 / PIT-001 (Rosemount 3051S Coplanar)
+        const ptGroup = new THREE.Group();
+        ptGroup.position.set(-2.2, R + 0.35, 0.4);
+        const ptNozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.35, 16), pipeMat);
+        ptGroup.add(ptNozzle);
+        const ptManifold = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.10), chromeTrimMat);
+        ptManifold.position.y = 0.22;
+        ptGroup.add(ptManifold);
+        const ptHead = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.18, 20), new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.8, roughness: 0.2 }));
+        ptHead.rotation.x = Math.PI / 2;
+        ptHead.position.set(0, 0.34, 0.05);
+        ptGroup.add(ptHead);
+        const ptLcd = new THREE.Mesh(new THREE.PlaneGeometry(0.06, 0.04), new THREE.MeshBasicMaterial({ color: 0x00e5ff }));
+        ptLcd.position.set(0, 0.34, 0.145);
+        ptGroup.add(ptLcd);
+        vesselGroup.add(ptGroup);
+
+        registerInteractable(ptHead, {
+            tag: "PT-001 / PIT-001",
+            title_en: "Rosemount 3051S Pressure Transmitter",
+            title_ar: "مرسلة ضغط البخار العازلة (روزمونت 3051)",
+            desc_en: "Vessel vapor space pressure transmitter regulating gas off-take via PIC-001 cascade to PV-003B.",
+            desc_ar: "مرسلة قياس ضغط البخار العلوي للعازلة، ترسل الإشارة لمتحكم الضغط PIC-001 للتحكم بصمام الغاز PV-003B.",
+            data: [
+                { label: "Model", val: "Rosemount 3051S Coplanar" },
+                { label: "Range", val: "0 to 25.0 barg" },
+                { label: "Output", val: "4-20 mA + HART" }
+            ]
+        });
+
+        // 3. Temperature Transmitter TT-001 / TIT-001 (Pt100 RTD in Thermowell)
+        const ttGroup = new THREE.Group();
+        ttGroup.position.set(1.5, -0.6, R + 0.1);
+        const ttWell = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.35, 16), chromeTrimMat);
+        ttWell.rotation.x = Math.PI / 2;
+        ttGroup.add(ttWell);
+        const ttHead = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.16, 20), new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.8, roughness: 0.2 }));
+        ttHead.position.set(0, 0.10, 0.22);
+        ttGroup.add(ttHead);
+        vesselGroup.add(ttGroup);
+
+        registerInteractable(ttHead, {
+            tag: "TT-001 / TIT-001",
+            title_en: "Temperature Transmitter (Pt100 RTD)",
+            title_ar: "مرسلة قياس درجة حرارة السائل (RTD)",
+            desc_en: "Duplex Pt100 RTD thermowell measuring separator liquid operating temperature (~65°C).",
+            desc_ar: "حساس حرارة مزدوج Pt100 داخل غمد وقاية يقيس حرارة السائل التشغيلية (حوالي 65 مئوية).",
+            data: [
+                { label: "Element", val: "Pt100 RTD Class A" },
+                { label: "Operating Temp", val: "65.0 °C" }
+            ]
+        });
+
+        // =========================================================================
+        // 6. SULZER CHEMTECH CERTIFIED INTERNALS (EXACT SULZER GA B01-0001_005.pdf ALIGNMENT)
+        // =========================================================================
+        const alloyMat = new THREE.MeshStandardMaterial({ color: 0xb0bec5, metalness: 0.85, roughness: 0.22, side: THREE.DoubleSide });
+
+        // 1. Sulzer GIVS Schoepentoeter (SECTION-A-A, 17.8 m²):
+        // Span: EL. -300 mm to EL. +1,915 mm (x = -7.10m to -4.885m), Length = 2.215m
+        // Centerline EL. +3,227 mm (y = +1.127m), Bottom at EL. +2,850 mm (y = +0.750m, 150 mm above LAHH)
+        const schoepGroup = new THREE.Group();
+        const schoepLength = 2.215;
+        const schoepCenter = -7.10 + schoepLength / 2; // x = -5.9925m
+        schoepGroup.position.set(schoepCenter, 1.127, 0);
+
+        const topCover = new THREE.Mesh(new THREE.BoxGeometry(schoepLength, 0.025, 1.15), alloyMat);
+        topCover.position.y = 0.377;
+        schoepGroup.add(topCover);
+        const botCover = new THREE.Mesh(new THREE.BoxGeometry(schoepLength, 0.025, 1.15), alloyMat);
+        botCover.position.y = -0.377;
+        schoepGroup.add(botCover);
+
+        // Transverse support bracket beam under vane box
+        const suppBeam = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.08, 1.40), chromeTrimMat);
+        suppBeam.position.set(0.2, -0.42, 0);
+        schoepGroup.add(suppBeam);
+
+        // 4 Welded Wall Brackets anchoring Schoepentoeter to vessel shell
+        [-0.85, 0.85].forEach(bx => {
+            [-0.60, 0.60].forEach(bz => {
+                const brk = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.05, 0.28), chromeTrimMat);
+                brk.position.set(bx, 0.36, bz);
+                schoepGroup.add(brk);
+            });
+        });
+
+        // 20 Curved Guide Vanes (10 pairs on left and right angled downwards/sideways)
+        for (let v = 0; v < 10; v++) {
+            const vx = -schoepLength / 2 + 0.15 + v * 0.21;
+            const vaneL = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.72, 0.025), alloyMat);
+            vaneL.position.set(vx, 0, 0.42 + v * 0.015);
+            vaneL.rotation.y = 0.75;
+            schoepGroup.add(vaneL);
+
+            const vaneR = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.72, 0.025), alloyMat);
+            vaneR.position.set(vx, 0, -0.42 - v * 0.015);
+            vaneR.rotation.y = -0.75;
+            schoepGroup.add(vaneR);
+        }
+        vesselGroup.add(schoepGroup);
+
+        registerInteractable(topCover, {
+            tag: "Sulzer GIVS Schoepentoeter",
+            title_en: "Sulzer Inlet Gas-Liquid Vane Diffuser (SECTION-A-A, 17.8 m²)",
+            title_ar: "موزع ومبدد طاقة التغذية سولزر (مقطع A-A بمساحة 17.8 م²)",
+            desc_en: "Alloy 825 feed distributor spanning EL. -300 to +1915 mm with 20 curved guide vanes dissipating jet kinetic energy and knocking down ~85% bulk liquids.",
+            desc_ar: "مبدد طاقة التغذية المصنوع من سبيكة Alloy 825 يمتد من EL. -300 إلى +1915 ملم مزود بـ 20 ريشة توجيه منحنية تبدد 85% من السائل فور دخوله.",
+            data: [
+                { label: "Model", val: "Sulzer GIVS Schoepentoeter (17.8 m²)" },
+                { label: "Axial Span", val: "EL. -300 mm to EL. +1,915 mm (L=2.215m)" },
+                { label: "Centerline", val: "EL. +3,227 mm (y = +1.127m)" },
+                { label: "Vanes", val: "20 Curved Guide Vanes (10 Pairs)" }
+            ]
+        });
+
+        // 2. Combined Sulzer Mellachevron H20Z (35 m²) + Perforated Baffle Plate PBP (20 m², 30% NFA) at EL. +7,000 mm (SECTION-B-B):
+        // Station: x = -6.80 + 7.00 = +0.20m
+        const station7000Group = new THREE.Group();
+        station7000Group.position.set(0.20, 0, 0);
+
+        // Upper Section (y = +0.25m to +2.08m): 6-bay vertical Mellachevron H20Z vane pack (35 m²)
+        const h20zFrame = new THREE.Mesh(new THREE.BoxGeometry(0.30, 1.83, 3.80), new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.85, roughness: 0.3, wireframe: true }));
+        h20zFrame.position.set(0, 1.165, 0);
+        station7000Group.add(h20zFrame);
+
+        for (let b = 0; b < 6; b++) {
+            const zBay = -1.50 + b * 0.60;
+            for (let v = 0; v < 4; v++) {
+                const zOffset = (v - 1.5) * 0.12;
+                const vane = new THREE.Mesh(new THREE.BoxGeometry(0.25, 1.75, 0.02), alloyMat);
+                vane.position.set(0, 1.165, zBay + zOffset);
+                vane.rotation.y = (v % 2 === 0 ? 0.25 : -0.25);
+                station7000Group.add(vane);
+            }
+        }
+
+        // Lower Section (y = -1.95m to +0.25m): semi-circular Perforated Baffle Plate (PBP, 30% NFA, 20 m²)
+        // 150 mm open bottom slot (y = -2.10m to -1.95m) for sand flushing
+        const pbpGeom = new THREE.CylinderGeometry(R * 0.96, R * 0.96, 0.025, 36, 1, false, 0, Math.PI);
+        const pbpPlate = new THREE.Mesh(pbpGeom, new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.80, roughness: 0.35, side: THREE.DoubleSide }));
+        pbpPlate.rotation.x = Math.PI / 2;
+        pbpPlate.rotation.z = Math.PI / 2;
+        pbpPlate.position.set(0, -0.85, 0);
+        station7000Group.add(pbpPlate);
+
+        // Circumferential Weld Lugs anchoring B-B assembly to vessel shell wall
+        for (let a = 0; a < 8; a++) {
+            const ang = (a / 8) * Math.PI * 2;
+            const lug = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.12, 0.05), chromeTrimMat);
+            lug.position.set(0, Math.sin(ang) * (R - 0.04), Math.cos(ang) * (R - 0.04));
+            station7000Group.add(lug);
+        }
+        vesselGroup.add(station7000Group);
+
+        registerInteractable(h20zFrame, {
+            tag: "Mellachevron H20Z & PBP",
+            title_en: "Sulzer Mellachevron H20Z (35 m²) & Perforated Baffle Plate (SECTION-B-B)",
+            title_ar: "حزمة صفائح التكتل H20Z وصفيحة التهدئة المثقبة (مقطع B-B)",
+            desc_en: "Dual-zone internal at EL. +7,000 mm: Upper 6-bay Mellachevron H20Z coalescing gas mist, lower 30% NFA perforated baffle calming liquid pool.",
+            desc_ar: "منظومة ثنائية عند المحطة EL. +7,000 ملم: الجزء العلوي حزمة صفائح موجية H20Z لفصل الضباب، والجزء السفلي صفيحة مثقبة 30% NFA لتهدئة السائل مع فتحة 150 ملم لغسل الرمال.",
+            data: [
+                { label: "Station", val: "EL. +7,000 mm (x = +0.20m)" },
+                { label: "Upper Vane Pack", val: "Sulzer Mellachevron H20Z (35 m²)" },
+                { label: "Lower Baffle", val: "Perforated Baffle Plate (20 m², 30% NFA)" },
+                { label: "Sand Slot", val: "150 mm bottom clearance" }
+            ]
+        });
+
+        // 3. Vertical Wire Mesh Demister (SECTION-C-C, 12.18 m²) at EL. +9,100 mm:
+        // Station: x = -6.80 + 9.10 = +2.30m
+        // Hanging vertically from top shell (y = +2.08m) down to EL. +2,350 mm (y = +0.25m), open liquid space below
+        const demisterCGroup = new THREE.Group();
+        demisterCGroup.position.set(2.30, 1.165, 0);
+
+        const demisterCPad = new THREE.Mesh(new THREE.BoxGeometry(0.15, 1.83, 3.80), wireMeshMat);
+        demisterCGroup.add(demisterCPad);
+
+        const demisterCFrame = new THREE.Mesh(new THREE.BoxGeometry(0.16, 1.85, 3.82), new THREE.MeshStandardMaterial({ color: 0x94a3b8, wireframe: true }));
+        demisterCGroup.add(demisterCFrame);
+
+        [-1.6, 1.6].forEach(fz => {
+            const hBeam = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.3), chromeTrimMat);
+            hBeam.position.set(0, 0.90, fz);
+            demisterCGroup.add(hBeam);
+        });
+        vesselGroup.add(demisterCGroup);
+
+        registerInteractable(demisterCPad, {
+            tag: "Vertical Wire Mesh Demister",
+            title_en: "Sulzer Vertical Wire Mesh Demister (SECTION-C-C, 12.18 m²)",
+            title_ar: "مانع الضباب السلكي الرأسي (مقطع C-C بمساحة 12.18 م²)",
+            desc_en: "Vertical 150 mm KnitMesh pad at EL. +9,100 mm capturing fine droplets from gas stream while liquid settling space remains open below.",
+            desc_ar: "وسادة سلكية رأسية بسماكة 150 ملم عند المحطة EL. +9,100 ملم تصطاد قطرات النفط المتبقية من الغاز مع بقاء حيز السائل مفتوحاً بالأسفل.",
+            data: [
+                { label: "Station", val: "EL. +9,100 mm (x = +2.30m)" },
+                { label: "Area", val: "12.18 m² (150 mm thick KnitMesh)" },
+                { label: "Elevation", val: "EL. +2,350 to +4,200 mm (y = +0.25m to +2.08m)" }
+            ]
+        });
+
+        // 4. Horizontal Mist Eliminator Hood under N3 (20") (SECTION-D-D, 8.32 m²):
+        // Spans EL. +10,168 mm to EL. +12,220 mm (L = 2,052 mm, centered at x = +4.40m under N3)
+        // Elevation: y = +1.48m to +2.08m (height 600 mm), width 2.20m
+        const hoodDGroup = new THREE.Group();
+        hoodDGroup.position.set(4.40, 1.78, 0);
+
+        const hoodPad = new THREE.Mesh(new THREE.BoxGeometry(2.05, 0.15, 2.20), wireMeshMat);
+        hoodDGroup.add(hoodPad);
+
+        const hoodFrame = new THREE.Mesh(new THREE.BoxGeometry(2.08, 0.18, 2.24), new THREE.MeshStandardMaterial({ color: 0x94a3b8, wireframe: true }));
+        hoodDGroup.add(hoodFrame);
+
+        // 4x SS316 Threaded Hanger Rods anchoring hood to top shell
+        [-0.85, 0.85].forEach(rx => {
+            [-0.95, 0.95].forEach(rz => {
+                const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.35, 12), chromeTrimMat);
+                rod.position.set(rx, 0.22, rz);
+                hoodDGroup.add(rod);
+            });
+        });
+        vesselGroup.add(hoodDGroup);
+
+        registerInteractable(hoodPad, {
+            tag: "Mist Eliminator Hood (N3)",
+            title_en: "Horizontal Gas Outlet Mist Eliminator Hood (SECTION-D-D, 8.32 m²)",
+            title_ar: "غطاء وسادة مانع الضباب الأفقي لمخرج الغاز (مقطع D-D)",
+            desc_en: "Suspended horizontal KnitMesh pad directly under 20\" gas outlet N3 spanning EL. +10,168 to +12,220 mm delivering 99.9% dry gas.",
+            desc_ar: "غطاء وسادة سلكية أفقية معلقة أسفل مخرج الغاز N3 مباشرة من EL. +10,168 إلى +12,220 ملم تضمن نقاوة الغاز وخلوه من الرذاذ بنسبة 99.9%.",
+            data: [
+                { label: "Station", val: "EL. +10,168 to +12,220 mm (under N3 at x = +4.40m)" },
+                { label: "Pad Area", val: "8.32 m² (150 mm KnitMesh)" },
+                { label: "Suspension", val: "4x SS316 Threaded Hanger Rods" },
+                { label: "Gas Purity", val: "99.9% Liquid Removal" }
+            ]
+        });
+
+        // 5. N2 (24") Cruciform Vortex Breaker at EL. +12,600 mm (x = +5.80m, y = -2.00m)
+        // + Flush Bottom 3" Sand-Flushing Nozzles (W1A..W2C)
+        const vbGroup = new THREE.Group();
+        vbGroup.position.set(5.80, -2.00, 0);
+        const vb1 = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.25, 0.025), alloyMat);
+        vbGroup.add(vb1);
+        const vb2 = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.25, 0.55), alloyMat);
+        vbGroup.add(vb2);
+        vesselGroup.add(vbGroup);
+
+        // 6 Bottom Sand-Flushing Nozzles (W1A, W1B, W1C, W2A, W2B, W2C)
+        [-6.60, -4.295, -3.325, -0.97, -0.05, 2.855].forEach(wx => {
+            const wNoz = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.15, 16), chromeTrimMat);
+            wNoz.position.set(wx, -2.15, 0);
+            vesselGroup.add(wNoz);
+        });
+
+        registerInteractable(vb1, {
+            tag: "Vortex Breaker (N2)",
+            title_en: "Cruciform (+) Anti-Vortex Baffle & Sand Flush Nozzles (W1A..W2C)",
+            title_ar: "كاسر الدوامات الصليبي (+) ونوزلات غسل الرمال (W1A..W2C)",
+            desc_en: "Cruciform anti-vortex baffle at EL. +12,600 mm inside 24\" N2 mouth preventing swirl cavitation, plus 6 bottom sand-flushing nozzles.",
+            desc_ar: "حاجز صليبي (+) يمنع تكون الدوامات القمعية في فوهة 24 بوصة N2، مع 6 نوزلات سفلية لغسل الرمال والترسبات.",
+            data: [
+                { label: "Position", val: "EL. +12,600 mm (x = +5.80m at N2 mouth)" },
+                { label: "Type", val: "Cruciform (+)" },
+                { label: "Sand Jet Nozzles", val: "6x 3\" W1A, W1B, W1C, W2A, W2B, W2C" }
+            ]
+        });
+
+        // =========================================================================
+        // 7. AUTHENTIC STRUCTURAL PORTAL FRAMEWORKS & ELEVATED PLATFORMS
+        // Matches Autodesk Navisworks 3D Plant Model (19-01-2021_Majnoon_NAWIS.nwd)
+        // =========================================================================
+        // 1. ELEVATED LIQUID VALVE PLATFORM PLTF EL. 101.111 (y = -1.89m, Grounded at y = -3.00m)
+        const liqPltfGroup = new THREE.Group();
+        liqPltfGroup.position.set(8.5, -1.89, 1.3);
+
+        const liqDeck = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.08, 1.8), galvGratingMat);
+        liqPltfGroup.add(liqDeck);
+
+        // 4 Heavy Structural Steel Support Legs grounded to slab at y = -3.00m
+        const liqLegH = -1.89 - FGL_Y; // 1.11m
+        [-2.5, 2.5].forEach(lx => {
+            [-0.8, 0.8].forEach(lz => {
+                const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12, liqLegH, 0.12), structSteelMat);
+                leg.position.set(lx, -liqLegH / 2, lz);
+                liqPltfGroup.add(leg);
+
+                const ftPlate = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.02, 0.24), chromeTrimMat);
+                ftPlate.position.set(lx, -liqLegH + 0.01, lz);
+                liqPltfGroup.add(ftPlate);
+            });
+        });
+
+        // Safety Yellow Handrails & Kickplates (Perimeter)
+        [-2.6, 0, 2.6].forEach(hx => {
+            const post = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.05, 12), safetyYellowMat);
+            post.position.set(hx, 0.55, 0.88);
+            liqPltfGroup.add(post);
+        });
+        const liqRailTop = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.04, 0.04), safetyYellowMat);
+        liqRailTop.position.set(0, 1.05, 0.88);
+        liqPltfGroup.add(liqRailTop);
+        const liqRailMid = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.03, 0.03), safetyYellowMat);
+        liqRailMid.position.set(0, 0.55, 0.88);
+        liqPltfGroup.add(liqRailMid);
+        const liqToeBoard = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.14, 0.02), safetyYellowMat);
+        liqToeBoard.position.set(0, 0.09, 0.88);
+        liqPltfGroup.add(liqToeBoard);
+
+        // Access Ladder
+        const liqLadder = new THREE.Group();
+        liqLadder.position.set(-2.65, -liqLegH / 2, 0);
+        [-0.22, 0.22].forEach(rz => {
+            const stringer = new THREE.Mesh(new THREE.BoxGeometry(0.05, liqLegH + 1.0, 0.02), safetyYellowMat);
+            stringer.position.z = rz;
+            liqLadder.add(stringer);
+        });
+        for (let r = 0; r < 5; r++) {
+            const rung = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.44, 8), chromeTrimMat);
+            rung.rotation.x = Math.PI / 2;
+            rung.position.y = -liqLegH / 2 + 0.15 + r * 0.25;
+            liqLadder.add(rung);
+        }
+        liqPltfGroup.add(liqLadder);
+        vesselGroup.add(liqPltfGroup);
+
+        registerInteractable(liqDeck, {
+            tag: "PLTF EL. 101.111",
+            title_en: "Elevated Liquid Valve Platform",
+            title_ar: "منصة صمامات مخرج السائل المرتفعة",
+            desc_en: "Elevated platform providing safe maintenance access to 24\" UZV-002, 14\" FV-001 control valve, and Coriolis flow meter.",
+            desc_ar: "منصة تشغيلية مدعمة على أعمدة فولاذية تتيح فحص صمام العزل UZV-002 وصمام التحكم FV-001 ومقياس كوريوليس بأمان.",
+            data: [{ label: "Elevation", val: "EL. 101.111 m" }, { label: "Foundation", val: "Structural Steel Frame to FGL" }]
+        });
+
+        // 2. UPPER ELEVATED GAS PLATFORM & STRUCTURAL PORTAL FRAME (PLTF EL. 104.506 / y = +2.60m)
+        // Matches Navisworks Images 1, 2, 4, 5
+        const upperPltfGroup = new THREE.Group();
+        upperPltfGroup.position.set(6.8, 2.60, 2.1);
+
+        const deckL = 7.2;
+        const deckW = 2.6;
+        const deckMesh = new THREE.Mesh(new THREE.BoxGeometry(deckL, 0.08, deckW), galvGratingMat);
+        upperPltfGroup.add(deckMesh);
+
+        // Vessel Top Inspection Walkway (Connecting main platform over to separator top shell)
+        const walkBridge = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.08, 1.4), galvGratingMat);
+        walkBridge.position.set(-2.0, 0, -1.8);
+        upperPltfGroup.add(walkBridge);
+
+        // Heavy Portal Frame Columns Grounded to FGL (y = -3.00m, total height = 5.60m)
+        const colHeight = 2.60 - FGL_Y; // 5.60m
+        const colXPositions = [-3.4, 0, 3.4];
+        const colZPositions = [-1.15, 1.15];
+
+        colXPositions.forEach(cx => {
+            colZPositions.forEach(cz => {
+                // Main I-beam Column (W12x65 equivalent in structural blue)
+                const col = new THREE.Mesh(new THREE.BoxGeometry(0.18, colHeight, 0.18), structSteelMat);
+                col.position.set(cx, -colHeight / 2, cz);
+                upperPltfGroup.add(col);
+
+                // Concrete Foundation Pedestal with Anchor Baseplate
+                const ped = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.30, 0.45), concretePedMat);
+                ped.position.set(cx, -colHeight + 0.15, cz);
+                upperPltfGroup.add(ped);
+
+                const basePlt = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.03, 0.32), chromeTrimMat);
+                basePlt.position.set(cx, -colHeight + 0.31, cz);
+                upperPltfGroup.add(basePlt);
+            });
+
+            // Transverse Portal Frame Beam under deck
+            const transBeam = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.22, deckW), structSteelMat);
+            transBeam.position.set(cx, -0.15, 0);
+            upperPltfGroup.add(transBeam);
+        });
+
+        // Longitudinal Perimeter I-Beams under deck
+        [-1.2, 1.2].forEach(lz => {
+            const longBeam = new THREE.Mesh(new THREE.BoxGeometry(deckL, 0.22, 0.16), structSteelMat);
+            longBeam.position.set(0, -0.15, lz);
+            upperPltfGroup.add(longBeam);
+        });
+
+        // Diagonal K-Bracing / X-Bracing along outer front portal frame (per Navisworks Image 1)
+        [-1.7, 1.7].forEach(bx => {
+            const brace1 = new THREE.Mesh(new THREE.BoxGeometry(0.10, 3.6, 0.10), structSteelMat);
+            brace1.rotation.z = 0.58;
+            brace1.position.set(bx - 0.8, -2.6, 1.15);
+            upperPltfGroup.add(brace1);
+
+            const brace2 = new THREE.Mesh(new THREE.BoxGeometry(0.10, 3.6, 0.10), structSteelMat);
+            brace2.rotation.z = -0.58;
+            brace2.position.set(bx + 0.8, -2.6, 1.15);
+            upperPltfGroup.add(brace2);
+        });
+
+        // Intermediate Horizontal Tie Beam
+        const tieBeam = new THREE.Mesh(new THREE.BoxGeometry(deckL, 0.14, 0.14), structSteelMat);
+        tieBeam.position.set(0, -2.8, 1.15);
+        upperPltfGroup.add(tieBeam);
+
+        // Safety Yellow Handrails & Kickplates (Perimeter)
+        // Outer longitudinal railing (+Z)
+        const postSpacing = deckL / 5;
+        for (let p = 0; p <= 5; p++) {
+            const px = -deckL / 2 + p * postSpacing;
+            const post = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.10, 12), safetyYellowMat);
+            post.position.set(px, 0.55, deckW / 2);
+            upperPltfGroup.add(post);
+        }
+        const upRailTop = new THREE.Mesh(new THREE.BoxGeometry(deckL, 0.04, 0.04), safetyYellowMat);
+        upRailTop.position.set(0, 1.10, deckW / 2);
+        upperPltfGroup.add(upRailTop);
+        const upRailMid = new THREE.Mesh(new THREE.BoxGeometry(deckL, 0.03, 0.03), safetyYellowMat);
+        upRailMid.position.set(0, 0.55, deckW / 2);
+        upperPltfGroup.add(upRailMid);
+        const upToeBoard = new THREE.Mesh(new THREE.BoxGeometry(deckL, 0.14, 0.02), safetyYellowMat);
+        upToeBoard.position.set(0, 0.09, deckW / 2);
+        upperPltfGroup.add(upToeBoard);
+
+        // Transverse end railings
+        [-deckL / 2, deckL / 2].forEach(ex => {
+            const postEnd = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.10, 12), safetyYellowMat);
+            postEnd.position.set(ex, 0.55, 0);
+            upperPltfGroup.add(postEnd);
+
+            const endRailTop = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, deckW), safetyYellowMat);
+            endRailTop.position.set(ex, 1.10, 0);
+            upperPltfGroup.add(endRailTop);
+            const endRailMid = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, deckW), safetyYellowMat);
+            endRailMid.position.set(ex, 0.55, 0);
+            upperPltfGroup.add(endRailMid);
+            const endToeBoard = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.14, deckW), safetyYellowMat);
+            endToeBoard.position.set(ex, 0.09, 0);
+            upperPltfGroup.add(endToeBoard);
+        });
+
+        // Full-Height Caged Safety Access Ladder (Ground to Platform Deck)
+        const fullLadder = new THREE.Group();
+        fullLadder.position.set(-deckL / 2 - 0.25, -colHeight / 2, deckW / 2);
+
+        [-0.24, 0.24].forEach(lz => {
+            const str = new THREE.Mesh(new THREE.BoxGeometry(0.05, colHeight + 1.1, 0.02), safetyYellowMat);
+            str.position.z = lz;
+            fullLadder.add(str);
+        });
+
+        const rungCount = Math.floor(colHeight / 0.30);
+        for (let r = 0; r < rungCount; r++) {
+            const rung = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.48, 8), chromeTrimMat);
+            rung.rotation.x = Math.PI / 2;
+            rung.position.y = -colHeight / 2 + 0.25 + r * 0.30;
+            fullLadder.add(rung);
+        }
+
+        // Safety Cage Hoops (Starting 2.2m above ground)
+        for (let c = 0; c < 9; c++) {
+            const hoopY = -colHeight / 2 + 2.2 + c * 0.42;
+            if (hoopY < colHeight / 2 + 0.8) {
+                const hoop = new THREE.Mesh(new THREE.TorusGeometry(0.38, 0.015, 8, 16, Math.PI * 1.3), safetyYellowMat);
+                hoop.rotation.x = Math.PI / 2;
+                hoop.rotation.z = Math.PI * 0.85;
+                hoop.position.set(-0.25, hoopY, 0);
+                fullLadder.add(hoop);
+            }
+        }
+        upperPltfGroup.add(fullLadder);
+        vesselGroup.add(upperPltfGroup);
+
+        registerInteractable(deckMesh, {
+            tag: "PLTF EL. 104.506",
+            title_en: "Elevated Gas Header & Relief Platform",
+            title_ar: "منصة مجمع الغاز وصمامات التنفيس المرتفعة",
+            desc_en: "Heavy structural portal frame platform supporting 16\" UZV-003, PV-003B, 49L Air Tank, PV-003A Flare valve, and FT-002 orifice meter.",
+            desc_ar: "منصة هيكلية كبرى بأعمدة فولاذية صلبة مثبتة بالأرض تحمل صمام الغاز UZV-003 وصمام PV-003B وخزان هواء الطوارئ 49L وصمام الشعلة ومقياس الجريان.",
+            data: [
+                { label: "Elevation", val: "EL. 104.506 m / 107.656 m" },
+                { label: "Structure", val: "Steel Portal Frame + Ground Columns" },
+                { label: "Access", val: "Full-Height Caged Safety Ladder" }
+            ]
+        });
+
+
+        // =========================================================================
+        // 8. VALVE FACTORY FUNCTIONS
+        // =========================================================================
+        // 1. Koso S1200 Globe Valve with C300 Piston Actuator
+        function buildKosoGlobeValve(tag, title_en, title_ar, desc_en, desc_ar, data, pipeR, isFlareValve = false, customMat = null) {
+            const vGroup = new THREE.Group();
+            const bodyMat = customMat || (isFlareValve ? flarePipeMat : valveBodyMat);
+
+            // Globe belly
+            const belly = new THREE.Mesh(new THREE.SphereGeometry(pipeR * 1.55, 24, 16), bodyMat);
+            belly.scale.set(1.1, 0.95, 0.95);
+            vGroup.add(belly);
+
+            // Flanges
+            [-pipeR * 1.5, pipeR * 1.5].forEach(px => {
+                const flg = new THREE.Mesh(new THREE.CylinderGeometry(pipeR * 1.4, pipeR * 1.4, pipeR * 0.28, 24), chromeTrimMat);
+                flg.rotation.z = Math.PI / 2;
+                flg.position.x = px;
+                vGroup.add(flg);
+            });
+
+            // Special feature for PV-003A: Built-in Acoustic Baffle at outlet
+            if (isFlareValve) {
+                const baffleCone = new THREE.Mesh(new THREE.CylinderGeometry(pipeR * 1.45, pipeR * 1.05, pipeR * 1.1, 24), bodyMat);
+                baffleCone.rotation.z = -Math.PI / 2;
+                baffleCone.position.x = pipeR * 2.15;
+                vGroup.add(baffleCone);
+            }
+
+            // Bonnet Neck & Yoke
+            const bonnetNeck = new THREE.Mesh(new THREE.CylinderGeometry(pipeR * 0.8, pipeR * 0.9, pipeR * 0.6, 20), bodyMat);
+            bonnetNeck.position.y = pipeR * 1.2;
+            vGroup.add(bonnetNeck);
+
+            // Moving stem & indicator pointer
+            const movingStem = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, pipeR * 2.2, 12), chromeTrimMat);
+            movingStem.position.y = pipeR * 2.5;
+            vGroup.add(movingStem);
+
+            const redPointer = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.1, 8), new THREE.MeshStandardMaterial({ color: 0xef4444 }));
+            redPointer.rotation.z = -Math.PI / 2;
+            redPointer.position.set(-0.06, 0, 0);
+            movingStem.add(redPointer);
+
+            // Koso C300 Piston Actuator (Cylindrical power barrel)
+            const c300Group = new THREE.Group();
+            c300Group.position.y = pipeR * 3.6;
+            const actMat = isFlareValve ? flarePipeMat : actuatorOrangeMat;
+            const cylinderBarrel = new THREE.Mesh(new THREE.CylinderGeometry(pipeR * 1.35, pipeR * 1.35, pipeR * 2.4, 32), actMat);
+            cylinderBarrel.position.y = pipeR * 1.25;
+            c300Group.add(cylinderBarrel);
+            const topCap = new THREE.Mesh(new THREE.CylinderGeometry(pipeR * 1.4, pipeR * 1.4, pipeR * 0.25, 32), chromeTrimMat);
+            topCap.position.y = pipeR * 2.48;
+            c300Group.add(topCap);
+            vGroup.add(c300Group);
+
+            // ABB TZID-C Smart Positioner
+            const posBox = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.32, 0.18), new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.6, roughness: 0.4 }));
+            posBox.position.set(pipeR * 0.82, pipeR * 2.5, 0.05);
+            vGroup.add(posBox);
+
+            registerInteractable(belly, {
+                tag: tag,
+                title_en: title_en,
+                title_ar: title_ar,
+                desc_en: desc_en,
+                desc_ar: desc_ar,
+                data: data
+            });
+
+            return { group: vGroup, stem: movingStem };
+        }
+
+        // 2. Koso AB4001 Butterfly Valve with AT1001U Rotary Actuator
+        function buildKosoButterflyValve(tag, title_en, title_ar, desc_en, desc_ar, data, pipeR, customMat = null) {
+            const vGroup = new THREE.Group();
+            const bodyMat = customMat || valveBodyMat;
+
+            // Wafer / Lug Body
+            const bodyMesh = new THREE.Mesh(new THREE.CylinderGeometry(pipeR * 1.45, pipeR * 1.45, pipeR * 0.7, 24), bodyMat);
+            bodyMesh.rotation.z = Math.PI / 2;
+            vGroup.add(bodyMesh);
+
+            // Rotating Disc inside body
+            const disc = new THREE.Mesh(new THREE.CylinderGeometry(pipeR * 1.05, pipeR * 1.05, 0.03, 24), chromeTrimMat);
+            disc.rotation.x = Math.PI / 2;
+            vGroup.add(disc);
+
+            // Top Bonnet & Neck
+            const neck = new THREE.Mesh(new THREE.CylinderGeometry(pipeR * 0.45, pipeR * 0.45, pipeR * 0.8, 16), bodyMat);
+            neck.position.y = pipeR * 1.1;
+            vGroup.add(neck);
+
+            // Koso AT1001U Scotch-Yoke Rotary Pneumatic Actuator
+            const actHousing = new THREE.Mesh(new THREE.BoxGeometry(pipeR * 1.4, pipeR * 1.1, pipeR * 2.4), actuatorOrangeMat);
+            actHousing.position.y = pipeR * 2.1;
+            vGroup.add(actHousing);
+
+            registerInteractable(bodyMesh, {
+                tag: tag,
+                title_en: title_en,
+                title_ar: title_ar,
+                desc_en: desc_en,
+                desc_ar: desc_ar,
+                data: data
+            });
+
+            return { group: vGroup, disc: disc };
+        }
+
+        // 3. Heavy-Duty Ledeen Scotch-Yoke Emergency Shutdown Valve (SDV)
+        function buildLedeenScotchYokeValve(tag, title_en, title_ar, desc_en, desc_ar, data, pipeR, isFailOpen = false, customMat = null) {
+            const vGroup = new THREE.Group();
+            const bodyMat = customMat || valveBodyMat;
+
+            // Heavy Trunnion Ball Valve Body
+            const ballBody = new THREE.Mesh(new THREE.SphereGeometry(pipeR * 1.45, 24, 16), bodyMat);
+            ballBody.scale.set(1.2, 1.0, 1.0);
+            vGroup.add(ballBody);
+
+            [-pipeR * 1.4, pipeR * 1.4].forEach(px => {
+                const flg = new THREE.Mesh(new THREE.CylinderGeometry(pipeR * 1.35, pipeR * 1.35, pipeR * 0.35, 24), chromeTrimMat);
+                flg.rotation.z = Math.PI / 2;
+                flg.position.x = px;
+                vGroup.add(flg);
+            });
+
+            // Bonnet Neck
+            const neck = new THREE.Mesh(new THREE.CylinderGeometry(pipeR * 0.6, pipeR * 0.65, pipeR * 0.7, 16), bodyMat);
+            neck.position.y = pipeR * 1.1;
+            vGroup.add(neck);
+
+            // Ledeen Scotch-Yoke Power Housing (Safety Yellow)
+            const yokeBox = new THREE.Mesh(new THREE.BoxGeometry(pipeR * 1.6, pipeR * 1.2, pipeR * 1.3), actuatorYellowMat);
+            yokeBox.position.y = pipeR * 2.1;
+            vGroup.add(yokeBox);
+
+            // Single-Acting Spring / Pneumatic Cylinder Barrel
+            const cylBarrel = new THREE.Mesh(new THREE.CylinderGeometry(pipeR * 0.65, pipeR * 0.65, pipeR * 2.2, 24), actuatorYellowMat);
+            cylBarrel.rotation.x = Math.PI / 2;
+            cylBarrel.position.set(0, pipeR * 2.1, pipeR * 1.6);
+            vGroup.add(cylBarrel);
+
+            // Emergency Manual Override Handwheel & Gearbox
+            const gearBox = new THREE.Mesh(new THREE.BoxGeometry(pipeR * 0.7, pipeR * 0.7, pipeR * 0.7), new THREE.MeshStandardMaterial({ color: 0x334155 }));
+            gearBox.position.set(0, pipeR * 2.1, -pipeR * 1.0);
+            vGroup.add(gearBox);
+
+            const wheelGeom = new THREE.TorusGeometry(pipeR * 0.85, 0.04, 12, 24);
+            const handWheel = new THREE.Mesh(wheelGeom, chromeTrimMat);
+            handWheel.position.set(0, pipeR * 2.1, -pipeR * 1.45);
+            vGroup.add(handWheel);
+
+            // Limit Switch Beacon Indicator
+            const beacon = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.12, 16), new THREE.MeshBasicMaterial({ color: (isFailOpen ? 0xef4444 : 0x22c55e) }));
+            beacon.position.y = pipeR * 2.8;
+            vGroup.add(beacon);
+
+            registerInteractable(ballBody, {
+                tag: tag,
+                title_en: title_en,
+                title_ar: title_ar,
+                desc_en: desc_en,
+                desc_ar: desc_ar,
+                data: data
+            });
+
+            return { group: vGroup, beacon: beacon };
+        }
+
+        // =========================================================================
+        // 9. PROCESS PIPING RUNS & VALVE SPACING (EXACT NAVISWORKS ALIGNMENT)
+        // =========================================================================
+        // 1. INLET FEED RUN (30" Line P-711101 entering Left Dish Head: x = -6.80m, y = +0.55m)
+        // Authentic insulated blue jacket per Navisworks Image 3 & 4
+        const feedPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 4.5, 24), feedPipeMat);
+        feedPipe.rotation.z = Math.PI / 2;
+        feedPipe.position.set(-L / 2 - 2.8, 0.55, 0);
+        vesselGroup.add(feedPipe);
+
+        // 30" Flange connection to left head nozzle N1
+        const n1Flange = new THREE.Mesh(new THREE.CylinderGeometry(0.50, 0.50, 0.14, 24), chromeTrimMat);
+        n1Flange.rotation.z = Math.PI / 2;
+        n1Flange.position.set(-L / 2 - 0.65, 0.55, 0);
+        vesselGroup.add(n1Flange);
+
+        // Concrete Pipe Sleeper / Support Pier under feed line
+        const feedSleeper = new THREE.Mesh(new THREE.BoxGeometry(0.60, 2.5, 0.90), concretePedMat);
+        feedSleeper.position.set(-L / 2 - 2.8, FGL_Y + 1.25, 0);
+        vesselGroup.add(feedSleeper);
+
+        const feedShoe = new THREE.Mesh(new THREE.BoxGeometry(0.50, 0.15, 0.80), skidSteelMat);
+        feedShoe.position.set(-L / 2 - 2.8, 0.10, 0);
+        vesselGroup.add(feedShoe);
+
+        const sdv051 = buildLedeenScotchYokeValve("UZV-051", '30" Inlet Emergency Shutdown Valve 1', 'صمام الإغلاق الطارئ لخط التغذية 1',
+            "Primary fail-closed trunnion ball valve isolating incoming high-pressure well fluids.",
+            "صمام إغلاق طارئ كروي رئيسي يعزل سوائل الآبار عالية الضغط فوراً عند حدوث طارئ.",
+            [{ label: "Size", val: '30" 300#' }, { label: "Actuator", val: "Ledeen Scotch-Yoke" }], 0.38, false);
+        sdv051.group.position.set(-L / 2 - 3.8, 0.55, 0);
+        vesselGroup.add(sdv051.group);
+
+        const sdv052 = buildLedeenScotchYokeValve("UZV-052", '30" Inlet Emergency Shutdown Valve 2', 'صمام الإغلاق الطارئ لخط التغذية 2',
+            "Secondary redundant fail-closed trunnion ball valve for 100% tight shutoff.",
+            "صمام إغلاق طارئ إضافي لتحقيق إغلاق محكم بنسبة 100% وفق متطلبات السلامة.",
+            [{ label: "Size", val: '30" 300#' }, { label: "Actuator", val: "Ledeen Scotch-Yoke" }], 0.38, false);
+        sdv052.group.position.set(-L / 2 - 1.9, 0.55, 0);
+        vesselGroup.add(sdv052.group);
+
+        // 2. LIQUID OUTLET RUN (24" Nozzle N2 at bottom shell x = +5.80m per GA 4033-0197)
+        // Runs along low concrete pipe sleepers per Navisworks Image 1
+        const liqNozzleN2 = new THREE.Mesh(new THREE.CylinderGeometry(0.30, 0.30, 0.55, 24), liqPipeMat);
+        liqNozzleN2.position.set(5.8, -R - 0.28, 0);
+        vesselGroup.add(liqNozzleN2);
+
+        // 24" Elbow turning along +X at y = -2.55m
+        const liqElbow = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 16), liqPipeMat);
+        liqElbow.position.set(5.8, -2.55, 0);
+        vesselGroup.add(liqElbow);
+
+        // 24" Horizontal Pipe extending along sleepers to x = 11.5m
+        const liqPipeH = new THREE.Mesh(new THREE.CylinderGeometry(0.30, 0.30, 5.7, 24), liqPipeMat);
+        liqPipeH.rotation.z = Math.PI / 2;
+        liqPipeH.position.set(8.65, -2.55, 0);
+        vesselGroup.add(liqPipeH);
+
+        // Concrete Pipe Sleepers on Ground supporting 24" / 14" line
+        const liqSleepersGroup = new THREE.Group();
+        [6.3, 7.8, 9.4, 11.0].forEach(sx => {
+            const slp = new THREE.Mesh(new THREE.BoxGeometry(0.50, 0.35, 1.2), concretePedMat);
+            slp.position.set(sx, FGL_Y + 0.175, 0);
+            liqSleepersGroup.add(slp);
+
+            const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.08, 0.70), skidSteelMat);
+            shoe.position.set(sx, -2.85, 0);
+            liqSleepersGroup.add(shoe);
+        });
+        vesselGroup.add(liqSleepersGroup);
+
+        // 24" Liquid SDV UZV-002 at x = 6.8m
+        const sdv002 = buildLedeenScotchYokeValve("UZV-002", '24" Liquid Emergency Shutdown Valve', 'صمام الإغلاق الطارئ لمخرج السائل',
+            "Trips closed on low level LALL <= 770 mm or manually from ESD console.",
+            "يغلق فوراً لمنع تسرب الغاز عند انخفاض المستوى LALL إلى 770 ملم.",
+            [{ label: "Size", val: '24" 300#' }, { label: "Interlock", val: "LALL / Note 26" }], 0.30, false);
+        sdv002.group.position.set(6.8, -2.55, 0);
+        vesselGroup.add(sdv002.group);
+
+        // Eccentric Reducer 20" x 14" (Flat On Bottom - FOB per GA 4033-0197) at x = 7.7m
+        const eccReducer = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.25, 0.50, 24), liqPipeMat);
+        eccReducer.rotation.z = Math.PI / 2;
+        eccReducer.position.set(7.7, -2.55, 0);
+        vesselGroup.add(eccReducer);
+
+        // 14" Koso S1200 Liquid Flow Control Valve FV-001 at x = 8.6m
+        const fv001Valve = buildKosoGlobeValve("FV-001", '14" Koso S1200 Liquid Control Valve', 'صمام التحكم بتدفق السائل 14 بوصة',
+            "Single-seat globe valve with Linear trim (Cv=2140) under cascade level-flow control.",
+            "صمام كوسو ذو مقعد أحادي وسعة Cv=2140 يتحكم بمعدل التدفق إلى المرحلة الثانية.",
+            [{ label: "Model", val: "Koso S1200" }, { label: "Cv", val: "2140 Linear" }], 0.18, false);
+        fv001Valve.group.position.set(8.6, -2.55, 0);
+        vesselGroup.add(fv001Valve.group);
+
+        // 14" Coriolis Mass Flow Meter 711-FE-001 at x = 9.8m
+        const coriolisGroup = new THREE.Group();
+        coriolisGroup.position.set(9.8, -2.55, 0);
+        const meterBody = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.55, 0.32), ss316Mat);
+        coriolisGroup.add(meterBody);
+        const transHousing = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.22, 20), new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.8, roughness: 0.2 }));
+        transHousing.position.y = 0.45;
+        coriolisGroup.add(transHousing);
+        vesselGroup.add(coriolisGroup);
+
+        registerInteractable(meterBody, {
+            tag: "711-FE-001 / FT-001",
+            title_en: "Coriolis Mass Flow Meter (14-inch)",
+            title_ar: "مقياس الجريان الكتلي كوريوليس (14 بوصة)",
+            desc_en: "High-accuracy dual bent-tube Coriolis flow element measuring total liquid mass rate and inline fluid density.",
+            desc_ar: "مقياس جريان كتلي عالي الدقة يقيس معدل الكتلة وكثافة النفط الخام مباشرة لإرسال القراءة إلى الـ DCS.",
+            data: [{ label: "Size", val: '14" 300#' }, { label: "Accuracy", val: "+/- 0.10% Mass" }]
+        });
+
+        // 3. GAS OUTLET RUN ON ELEVATED PLATFORM (Matches Navisworks Images 2, 4, 5)
+        // Gas Nozzle N3 at shell top x = +4.40m, y = +R = +2.10m, z = 0
+        const gasNozzleN3 = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.55, 24), gasPipeMat);
+        gasNozzleN3.position.set(4.4, R + 0.28, 0);
+        vesselGroup.add(gasNozzleN3);
+
+        // Concentric Reducer 20" x 16"
+        const concReducer = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.26, 0.50, 24), gasPipeMat);
+        concReducer.position.set(4.4, R + 0.75, 0);
+        vesselGroup.add(concReducer);
+
+        // 16" Vertical Riser rising to platform pipe elevation y = 3.30m
+        const gasRiser = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.20, 0.65, 24), gasPipeMat);
+        gasRiser.position.set(4.4, R + 1.25, 0);
+        vesselGroup.add(gasRiser);
+
+        // 90° Elbow turning towards +Z (onto the platform deck)
+        const gasElbowZ = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 16), gasPipeMat);
+        gasElbowZ.position.set(4.4, 3.30, 0);
+        vesselGroup.add(gasElbowZ);
+
+        // 16" Pipe Cross-Run from z = 0 to z = 1.80m (towards platform)
+        const gasCrossPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.20, 1.80, 24), gasPipeMat);
+        gasCrossPipe.rotation.x = Math.PI / 2;
+        gasCrossPipe.position.set(4.4, 3.30, 0.90);
+        vesselGroup.add(gasCrossPipe);
+
+        // 90° Elbow turning along +X along the platform deck at z = 1.80m, y = 3.30m
+        const gasElbowX = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 16), gasPipeMat);
+        gasElbowX.position.set(4.4, 3.30, 1.80);
+        vesselGroup.add(gasElbowX);
+
+        // 16" Main Gas Header Pipe running along platform deck (x = 4.4m to 11.5m, y = 3.30m, z = 1.80m)
+        const gasHeaderPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.20, 7.1, 24), gasPipeMat);
+        gasHeaderPipe.rotation.z = Math.PI / 2;
+        gasHeaderPipe.position.set(7.95, 3.30, 1.80);
+        vesselGroup.add(gasHeaderPipe);
+
+        // Pipe Support Shoes resting on platform steel beams
+        [5.0, 7.5, 9.0, 10.5].forEach(px => {
+            const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.15, 0.35), structSteelMat);
+            shoe.position.set(px, 3.02, 1.80);
+            vesselGroup.add(shoe);
+        });
+
+        // 16" Gas SDV UZV-003 at x = 5.4m, z = 1.80m, y = 3.30m
+        const sdv003 = buildLedeenScotchYokeValve("UZV-003", '16" Gas Emergency Shutdown Valve', 'صمام الإغلاق الطارئ لمخرج الغاز',
+            "Trips closed on high level LAHH >= 2700 mm or automatically via Note 26 interlock.",
+            "صمام يغلق فوراً لمنع طوفان السائل أو تلقائياً عند تفعيل قفل Note 26.",
+            [{ label: "Size", val: '16" 300#' }, { label: "Interlock", val: "Note 26 / LAHH" }], 0.20, false, gasValveBodyMat);
+        sdv003.group.position.set(5.4, 3.30, 1.80);
+        vesselGroup.add(sdv003.group);
+
+        // Flare Branch Pipe & PV-003A (14" Koso with Acoustic Baffle)
+        // Branches off at x = 6.8m, offset in +Z to z = 2.65m on the platform
+        const flareTee = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 16), gasFlareValveMat);
+        flareTee.position.set(6.8, 3.30, 1.80);
+        vesselGroup.add(flareTee);
+
+        const flareConnPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.85, 20), gasFlareValveMat);
+        flareConnPipe.rotation.x = Math.PI / 2;
+        flareConnPipe.position.set(6.8, 3.30, 2.22);
+        vesselGroup.add(flareConnPipe);
+
+        const pv003aValve = buildKosoGlobeValve("PV-003A", '14" Koso S1200 Flare Valve with Baffle', 'صمام تصريف الشعلة 14 بوصة مع حاجز صوتي',
+            "Low-noise flare venting valve with built-in 14-inch acoustic outlet baffle relieving excess gas.",
+            "صمام كوسو مزود بحاجز صوتي داخلي عند المخرج لتشتيت الضوضاء والاضطراب أثناء التصريف للشعلة.",
+            [{ label: "Model", val: "Koso S1200" }, { label: "Cv", val: "1170 Equal %" }], 0.18, true, gasFlareValveMat);
+        pv003aValve.group.position.set(6.8, 3.30, 2.65);
+        vesselGroup.add(pv003aValve.group);
+
+        // 14" Koso AB4001 Butterfly Valve PV-003B in 16" line at x = 8.2m, z = 1.80m, y = 3.30m
+        const pv003bValve = buildKosoButterflyValve("PV-003B", '14" Koso AB4001 Gas Header Valve', 'صمام فراشة مجمع الغاز 14 بوصة',
+            "API 609 high-performance butterfly valve with 49L volume tank (Fail Locked).",
+            "صمام فراشة عالي الأداء مع مشغل دوراني وخزان هواء 49 لتراً لوضعية Fail Locked.",
+            [{ label: "Model", val: "Koso AB4001" }, { label: "Cv", val: "3990" }], 0.20, gasValveBodyMat);
+        pv003bValve.group.position.set(8.2, 3.30, 1.80);
+        vesselGroup.add(pv003bValve.group);
+
+        // =========================================================================
+        // 49L AIR VOLUME TANK (STANDING ON 3 LEGS ON PLATFORM DECK PER NAVISWORKS)
+        // Matches Navisworks Image 5 (media_1790228877000.png) 1:1!
+        // =========================================================================
+        const tankGroup = new THREE.Group();
+        tankGroup.position.set(8.2, 2.60, 2.85); // Resting on platform deck y = 2.60m
+
+        const silverTankMat = new THREE.MeshStandardMaterial({
+            color: 0xd1d5db,
+            metalness: 0.88,
+            roughness: 0.18
+        });
+
+        // 3 Tubular Steel Support Legs with Footpads resting on grating
+        for (let l = 0; l < 3; l++) {
+            const legAng = (l / 3) * Math.PI * 2;
+            const legR = 0.16;
+            const legX = Math.cos(legAng) * legR;
+            const legZ = Math.sin(legAng) * legR;
+
+            const tLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.28, 12), silverTankMat);
+            tLeg.position.set(legX, 0.14, legZ);
+            tankGroup.add(tLeg);
+
+            const tPad = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.015, 0.06), chromeTrimMat);
+            tPad.position.set(legX, 0.008, legZ);
+            tankGroup.add(tPad);
+        }
+
+        // Vertical Cylindrical Tank Body (Diameter = 0.36m, Height = 0.70m)
+        const tBody = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.65, 24), silverTankMat);
+        tBody.position.y = 0.28 + 0.325; // y = 0.605m above deck
+        tankGroup.add(tBody);
+
+        // Top and Bottom Ellipsoidal Heads
+        const tHeadTop = new THREE.Mesh(new THREE.SphereGeometry(0.18, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.5), silverTankMat);
+        tHeadTop.position.y = 0.28 + 0.65;
+        tankGroup.add(tHeadTop);
+
+        const tHeadBot = new THREE.Mesh(new THREE.SphereGeometry(0.18, 20, 12, 0, Math.PI * 2, Math.PI * 0.5, Math.PI * 0.5), silverTankMat);
+        tHeadBot.position.y = 0.28;
+        tankGroup.add(tHeadBot);
+
+        // Local Pressure Gauge & Manifold on Tank Head
+        const tGauge = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.02, 16), chromeTrimMat);
+        tGauge.rotation.x = Math.PI / 2;
+        tGauge.position.set(0, 0.28 + 0.78, 0.10);
+        tankGroup.add(tGauge);
+
+        // Stainless Steel Pneumatic Tubing running from Volume Tank to PV-003B Actuator
+        const tubingCurve = new THREE.CatmullRomCurve3([
+            new THREE.Vector3(0, 0.65, 0),
+            new THREE.Vector3(0, 0.85, -0.40),
+            new THREE.Vector3(0, 0.70, -0.90),
+            new THREE.Vector3(0, 0.70, -1.05)
+        ]);
+        const tubingGeom = new THREE.TubeGeometry(tubingCurve, 16, 0.008, 8, false);
+        const tubingMesh = new THREE.Mesh(tubingGeom, ss316Mat);
+        tankGroup.add(tubingMesh);
+
+        vesselGroup.add(tankGroup);
+
+        registerInteractable(tBody, {
+            tag: "49L Air Volume Tank (PV-003B)",
+            title_en: "49-Liter Safety Air Volume Tank",
+            title_ar: "خزان هواء الطوارئ سعة 49 لتراً (Fail-Locked)",
+            desc_en: "Dedicated 49-liter instrument air reservoir ensuring PV-003B retains Fail-Locked position during pneumatic supply failure per P&ID Note 26.",
+            desc_ar: "خزان هواء مضغوط سعة 49 لتراً يضمن بقاء صمام الغاز PV-003B في موضعه الأخير دون حركة (Fail-Locked) عند انقطاع هواء الآلات وفق الملاحظة 26 في الـ P&ID.",
+            data: [
+                { label: "Tag", val: "Air Tank PV-003B" },
+                { label: "Volume", val: "49 Liters (P&ID Note 26)" },
+                { label: "Mounting", val: "3-Leg Floor Mount on Deck" },
+                { label: "Function", val: "Fail Locked Reservoir" }
+            ]
+        });
+
+        // 4. GAS ORIFICE METER FT-002 AT x = 9.6m, z = 1.80m, y = 3.30m
+        const ft002Group = new THREE.Group();
+        ft002Group.position.set(9.6, 3.30, 1.80);
+
+        [-0.10, 0.10].forEach(fx => {
+            const oflg = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.08, 24), chromeTrimMat);
+            oflg.rotation.z = Math.PI / 2;
+            oflg.position.x = fx;
+            ft002Group.add(oflg);
+        });
+
+        const ofTab = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.25, 0.08), chromeTrimMat);
+        ofTab.position.set(0, 0.35, 0);
+        ft002Group.add(ofTab);
+
+        const ofTrans = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.22, 0.14), new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.8, roughness: 0.2 }));
+        ofTrans.position.set(0, 0.65, 0.25);
+        ft002Group.add(ofTrans);
+
+        const ofLcd = new THREE.Mesh(new THREE.PlaneGeometry(0.08, 0.05), new THREE.MeshBasicMaterial({ color: 0x00e5ff }));
+        ofLcd.position.set(0, 0.65, 0.325);
+        ft002Group.add(ofLcd);
+        vesselGroup.add(ft002Group);
+
+        registerInteractable(ofTab, {
+            tag: "FT-002 / FE-002",
+            title_en: '16" Gas Orifice Flow Meter',
+            title_ar: 'مقياس جريان الغاز الخانق 16 بوصة',
+            desc_en: "Orifice plate differential pressure flow element with ABB 266 DP transmitter.",
+            desc_ar: "صفيحة قياس خانقة لقياس التدفق الغازي عبر الضغط التفاضلي مع مرسلة ذكية ABB 266.",
+            data: [{ label: "Size", val: '16" 300#' }, { label: "Standard", val: "ISO 5167" }]
+        });
+
+        // 5. DUAL PILOT-OPERATED SAFETY RELIEF VALVES (PSV-001A & PSV-001B) at x = 3.5m
+        // Matches Navisworks Images 2 & 4
+        [-0.45, 0.45].forEach((pz, idx) => {
+            const psvTag = idx === 0 ? "PSV-001A" : "PSV-001B";
+            const psvGroup = new THREE.Group();
+            psvGroup.position.set(3.5, R + 0.30, pz);
+
+            // Inlet Flange & Nozzle
+            const psvNozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.45, 20), pipeMat);
+            psvGroup.add(psvNozzle);
+
+            const psvBody = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.45, 0.35), flarePipeMat);
+            psvBody.position.y = 0.45;
+            psvGroup.add(psvBody);
+
+            const pilotDome = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.50, 20), flarePipeMat);
+            pilotDome.position.y = 0.90;
+            psvGroup.add(pilotDome);
+
+            const pilotCap = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 12), chromeTrimMat);
+            pilotCap.position.y = 1.15;
+            psvGroup.add(pilotCap);
+
+            // Relief discharge piping turning into flare collector
+            const dischElbow = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.45, 16), flarePipeMat);
+            dischElbow.rotation.z = Math.PI / 2;
+            dischElbow.position.set(0.35, 0.45, 0);
+            psvGroup.add(dischElbow);
+
+            vesselGroup.add(psvGroup);
+
+            registerInteractable(psvBody, {
+                tag: psvTag,
+                title_en: "Pilot-Operated Safety Relief Valve (8Q10)",
+                title_ar: "صمام الأمان وتفريغ الضغط التجريبي",
+                desc_en: "High-capacity pilot relief valve relieving to HP Flare header if pressure exceeds 15.0 barg.",
+                desc_ar: "صمام أمان رئيسي عالي السعة يفتح تلقائياً لتفريغ الغاز إلى الشعلة عند تجاوز الضغط 15.0 بار.",
+                data: [{ label: "Set Pressure", val: "15.0 barg" }, { label: "Orifice", val: '8" Q 10"' }]
+            });
+        });
+
+
+        // =========================================================================
+        // 10. CONFORMING CYLINDRICAL FLUID VOLUMES & DYNAMIC WAVE SURFACES
+        // =========================================================================
+        // Water Volume: Inner cylinder segment clipped strictly at top by waterTopClipPlane
+        const fluidCylGeom = new THREE.CylinderGeometry(R_IN, R_IN, L * 0.98, 64, 1, false);
+        const waterCylMesh = new THREE.Mesh(fluidCylGeom, waterMat);
+        waterCylMesh.rotation.z = Math.PI / 2;
+        vesselGroup.add(waterCylMesh);
+
+        // Water Top Surface Plate (Segmented Plane for Wave Ripple Displacement)
+        const waterSurfaceGeom = new THREE.PlaneGeometry(L * 0.98, 1.0, 48, 12);
+        const waterSurfaceMat = new THREE.MeshStandardMaterial({
+            color: 0x0284c7,
+            transparent: true,
+            opacity: 0.92,
+            roughness: 0.05,
+            metalness: 0.15,
+            side: THREE.DoubleSide,
+            clippingPlanes: [educationalClipPlane]
+        });
+        const waterSurfaceMesh = new THREE.Mesh(waterSurfaceGeom, waterSurfaceMat);
+        waterSurfaceMesh.rotation.x = -Math.PI / 2;
+        waterSurfaceMesh.position.y = -VESSEL_R + 0.31;
+        vesselGroup.add(waterSurfaceMesh);
+
+        // Oil Volume: Inner cylinder segment clipped at top by oilTopClipPlane & bottom by oilBottomClipPlane
+        const oilCylMesh = new THREE.Mesh(fluidCylGeom, oilMat);
+        oilCylMesh.rotation.z = Math.PI / 2;
+        vesselGroup.add(oilCylMesh);
+
+        // Oil Top Surface Plate (High-Resolution Segmented Plane for Realtime Wave Dynamics)
+        const oilSurfaceGeom = new THREE.PlaneGeometry(L * 0.98, 1.0, 64, 16);
+        const oilSurfaceMat = new THREE.MeshStandardMaterial({
+            color: 0xd97706,
+            transparent: true,
+            opacity: 0.92,
+            roughness: 0.10,
+            metalness: 0.20,
+            side: THREE.DoubleSide,
+            clippingPlanes: [educationalClipPlane]
+        });
+        const oilSurfaceMesh = new THREE.Mesh(oilSurfaceGeom, oilSurfaceMat);
+        oilSurfaceMesh.rotation.x = -Math.PI / 2;
+        oilSurfaceMesh.position.y = -VESSEL_R + 1.55;
+        vesselGroup.add(oilSurfaceMesh);
+
+        // =========================================================================
+        // 11. CONTINUOUS INLET FEED STREAM & SCHOEPENTOETER WATERFALL CASCADES
+        // =========================================================================
+        const cfdGroup = new THREE.Group();
+        vesselGroup.add(cfdGroup);
+
+        // 1. Continuous Cylindrical Multiphase Feed Stream rushing into N1 at y = +1.12m
+        const feedStreamGeom = new THREE.CylinderGeometry(0.24, 0.24, 1.2, 24);
+        const feedStreamMat = new THREE.MeshStandardMaterial({
+            color: 0xf59e0b,
+            transparent: true,
+            opacity: 0.85,
+            roughness: 0.15,
+            metalness: 0.10
+        });
+        const feedStreamMesh = new THREE.Mesh(feedStreamGeom, feedStreamMat);
+        feedStreamMesh.rotation.z = Math.PI / 2;
+        feedStreamMesh.position.set(-L / 2 - 0.35, 1.12, 0);
+        cfdGroup.add(feedStreamMesh);
+
+        // 2. Continuous Schoepentoeter Knockout Cascades (Curved Waterfall Sheets)
+        // Two wide cascading curved liquid sheets pouring from Schoepentoeter vanes into liquid pool
+        function createWaterfallCascade(side) {
+            // side = +1 (front) or -1 (back)
+            const cascadeGeom = new THREE.PlaneGeometry(1.85, 2.2, 16, 16);
+            const cascadeMat = new THREE.MeshStandardMaterial({
+                color: 0xf59e0b,
+                transparent: true,
+                opacity: 0.80,
+                roughness: 0.25,
+                metalness: 0.10,
+                side: THREE.DoubleSide
+            });
+            const cascadeMesh = new THREE.Mesh(cascadeGeom, cascadeMat);
+            cascadeMesh.position.set(-L / 2 + 1.915 / 2, 0.0, side * 0.45);
+            cascadeMesh.rotation.y = side * 0.18;
+            return cascadeMesh;
+        }
+
+        const waterfallL = createWaterfallCascade(1);
+        const waterfallR = createWaterfallCascade(-1);
+        cfdGroup.add(waterfallL);
+        cfdGroup.add(waterfallR);
+
+        // Circular Splash Ripple Rings at base of Schoepentoeter waterfall
+        const splashRings = [];
+        [-0.45, 0.45].forEach(sz => {
+            const ringGeom = new THREE.RingGeometry(0.05, 0.45, 24);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0xfde68a, transparent: true, opacity: 0.7, side: THREE.DoubleSide });
+            const ringMesh = new THREE.Mesh(ringGeom, ringMat);
+            ringMesh.rotation.x = -Math.PI / 2;
+            ringMesh.position.set(-L / 2 + 1.915 / 2, -VESSEL_R + 1.55, sz);
+            cfdGroup.add(ringMesh);
+            splashRings.push(ringMesh);
+        });
+
+        // 3. Vapor Flow Ribbons & Suction Streamlines
+        const vaporRibbonGeom = new THREE.BufferGeometry();
+        const vaporRibbonCount = 12;
+        const vaporCurves = [];
+        for (let r = 0; r < vaporRibbonCount; r++) {
+            const startX = -L / 2 + 2.5 + r * 0.8;
+            const curve = new THREE.CatmullRomCurve3([
+                new THREE.Vector3(startX, 0.3 + Math.random() * 0.4, (Math.random() - 0.5) * 1.8),
+                new THREE.Vector3(startX + 2.0, 1.2 + Math.random() * 0.3, (Math.random() - 0.5) * 1.5),
+                new THREE.Vector3(3.8 + Math.random() * 0.6, 1.6, (Math.random() - 0.5) * 0.8),
+                new THREE.Vector3(4.4, R + 0.3, 0)
+            ]);
+            vaporCurves.push(curve);
+        }
+
+        // =========================================================================
+        // 12. MULTIPHASE PARTICLES (MICRO-DROPLETS & DEGASSED BUBBLES)
+        // =========================================================================
+        const particleGroup = new THREE.Group();
+        vesselGroup.add(particleGroup);
+
+        // 1. Stokes Gravity Settling Water Droplets (Blue, Realistic Micro-size)
+        const dropCount = 450;
+        const dropGeom = new THREE.BufferGeometry();
+        const dropPos = new Float32Array(dropCount * 3);
+        const dropVel = new Float32Array(dropCount);
+
+        for (let i = 0; i < dropCount; i++) {
+            dropPos[i * 3] = -L / 2 + 3.8 + Math.random() * (L - 4.5);
+            dropPos[i * 3 + 1] = -R + 0.2 + Math.random() * 1.6;
+            dropPos[i * 3 + 2] = (Math.random() - 0.5) * 3.0;
+            dropVel[i] = 0.005 + Math.random() * 0.008;
+        }
+        dropGeom.setAttribute('position', new THREE.BufferAttribute(dropPos, 3));
+        const dropParticles = new THREE.Points(dropGeom, new THREE.PointsMaterial({ color: 0x0284c7, size: 0.05, transparent: true, opacity: 0.85 }));
+        particleGroup.add(dropParticles);
+
+        // 2. Buoyant Micro-Bubbles Rising out of Oil (White)
+        const bubbleCount = 350;
+        const bubbleGeom = new THREE.BufferGeometry();
+        const bubblePos = new Float32Array(bubbleCount * 3);
+        const bubbleVel = new Float32Array(bubbleCount);
+
+        for (let k = 0; k < bubbleCount; k++) {
+            bubblePos[k * 3] = -L / 2 + 1.2 + Math.random() * (L - 2.5);
+            bubblePos[k * 3 + 1] = -R + Math.random() * 1.5;
+            bubblePos[k * 3 + 2] = (Math.random() - 0.5) * 2.8;
+            bubbleVel[k] = 0.012 + Math.random() * 0.015;
+        }
+        bubbleGeom.setAttribute('position', new THREE.BufferAttribute(bubblePos, 3));
+        const bubbleParticles = new THREE.Points(bubbleGeom, new THREE.PointsMaterial({ color: 0xffffff, size: 0.04, transparent: true, opacity: 0.80 }));
+        particleGroup.add(bubbleParticles);
+
+        // 3. Vapor Flow Mist Particles to Mellachevron & Demister Box
+        const vaporCount = 300;
+        const vaporGeom = new THREE.BufferGeometry();
+        const vaporPos = new Float32Array(vaporCount * 3);
+        const vaporVel = new Float32Array(vaporCount);
+
+        for (let v = 0; v < vaporCount; v++) {
+            vaporPos[v * 3] = -L / 2 + 2.0 + Math.random() * (L * 0.85);
+            vaporPos[v * 3 + 1] = 0.3 + Math.random() * (R - 0.5);
+            vaporPos[v * 3 + 2] = (Math.random() - 0.5) * 2.8;
+            vaporVel[v] = 0.025 + Math.random() * 0.035;
+        }
+        vaporGeom.setAttribute('position', new THREE.BufferAttribute(vaporPos, 3));
+        const vaporParticles = new THREE.Points(vaporGeom, new THREE.PointsMaterial({ color: 0x38bdf8, size: 0.045, transparent: true, opacity: 0.70 }));
+        particleGroup.add(vaporParticles);
+
+        // 4. Degassed Crude Oil Streamlines into Vortex Breaker N2
+        const oilFlowCount = 280;
+        const oilFlowGeom = new THREE.BufferGeometry();
+        const oilFlowPos = new Float32Array(oilFlowCount * 3);
+        const oilFlowVel = new Float32Array(oilFlowCount);
+
+        for (let o = 0; o < oilFlowCount; o++) {
+            oilFlowPos[o * 3] = -L / 2 + 4.0 + Math.random() * (L - 4.5);
+            oilFlowPos[o * 3 + 1] = -R + 0.35 + Math.random() * 1.0;
+            oilFlowPos[o * 3 + 2] = (Math.random() - 0.5) * 2.6;
+            oilFlowVel[o] = 0.015 + Math.random() * 0.020;
+        }
+        oilFlowGeom.setAttribute('position', new THREE.BufferAttribute(oilFlowPos, 3));
+        const oilFlowParticles = new THREE.Points(oilFlowGeom, new THREE.PointsMaterial({ color: 0xf59e0b, size: 0.05, transparent: true, opacity: 0.75 }));
+        particleGroup.add(oilFlowParticles);
+
+        // Default Mode 0: Continuous CFD Flow visible, multiphase particles subtle
+        cfdGroup.visible = true;
+        particleGroup.visible = false;
+
+
+        // =========================================================================
+        // 13. AUTHENTIC NAVISWORKS IFC4 CAD LOADER, CUTAWAY & CAMERA PRESETS
+        // =========================================================================
+        const navisCadGroup = new THREE.Group();
+        vesselGroup.add(navisCadGroup);
+
+        const navisShellMats = [];
+        const navisPipingMats = [];
+        const navisTagMeshes = {};
+
+        const NAVIS_TAG_META = {
+            "FV-001": {
+                tag: "CP2-711-FV-001",
+                title_en: '14" Koso S1200 Liquid Level Control Valve (Navisworks CAD)',
+                title_ar: 'صمام التحكم بمستوى وتدفق السائل FV-001 (موديل نافيسووركس الأصلي)',
+                desc_en: "Authentic 3D CAD geometry extracted from 19-01-2021_Majnoon_NAVIS_IFC4.ifczip. Regulates crude oil outflow to 2nd Stage Separator.",
+                desc_ar: "مجسم ثلاثي الأبعاد مستخرج مباشرة من ملف نافيسووركس الرسمي لحقل مجنون. يتحكم بتصريف النفط الخام إلى عازلة المرحلة الثانية.",
+                data: [{ label: "IFC Tag", val: "/CP2-711-FV-001" }, { label: "Model", val: "Koso S1200 (Cv=2140)" }]
+            },
+            "PV-003B": {
+                tag: "CP2-711-PV-003B",
+                title_en: '14" Koso AB4001 Gas Header Control Valve (Navisworks CAD)',
+                title_ar: 'صمام التحكم بضغط الغاز الرئيسي PV-003B (موديل نافيسووركس الأصلي)',
+                desc_en: "Authentic 3D CAD geometry extracted from 19-01-2021_Majnoon_NAVIS_IFC4.ifczip. Controls separator pressure via gas export header.",
+                desc_ar: "مجسم ثلاثي الأبعاد مستخرج مباشرة من ملف نافيسووركس الرسمي. ينظم ضغط العازلة عبر خط الغاز الرئيسي مع خزان هواء 49 لتر.",
+                data: [{ label: "IFC Tag", val: "/CP2-711-PV-003B" }, { label: "Fail Action", val: "Fail-Locked (49L Tank)" }]
+            },
+            "PV-003A": {
+                tag: "CP2-711-PV-003A",
+                title_en: '14" Koso Flare Control Valve with Acoustic Baffle (Navisworks CAD)',
+                title_ar: 'صمام تصريف الغاز إلى الشعلة PV-003A (موديل نافيسووركس الأصلي)',
+                desc_en: "Authentic 3D CAD geometry extracted from 19-01-2021_Majnoon_NAVIS_IFC4.ifczip. Split-range flare valve relieving excess pressure.",
+                desc_ar: "مجسم ثلاثي الأبعاد مستخرج مباشرة من ملف نافيسووركس الرسمي. يفتح عند ارتفاع الضغط لتصريف الغاز الزائد إلى الشعلة.",
+                data: [{ label: "IFC Tag", val: "/CP2-711-PV-003A" }, { label: "Service", val: "HP Flare Split-Range" }]
+            },
+            "UZV-001": {
+                tag: "CP2-711-UZV-001",
+                title_en: 'Inlet Emergency Shutdown Valve UZV-001 (Navisworks CAD)',
+                title_ar: 'صمام الإغلاق الطارئ لخط الدخول UZV-001 (موديل نافيسووركس الأصلي)',
+                desc_en: "Authentic 3D CAD geometry extracted from 19-01-2021_Majnoon_NAVIS_IFC4.ifczip. Isolates separator feed on ESD trip.",
+                desc_ar: "مجسم ثلاثي الأبعاد مستخرج مباشرة من ملف نافيسووركس الرسمي. يعزل خط التغذية فوراً عند تفعيل نظام الإغلاق الطارئ.",
+                data: [{ label: "IFC Tag", val: "/CP2-711-UZV-001" }, { label: "Action", val: "Fail-Closed (FC)" }]
+            },
+            "UZV-002": {
+                tag: "CP2-711-UZV-002",
+                title_en: 'Liquid Outlet Emergency Shutdown Valve UZV-002 (Navisworks CAD)',
+                title_ar: 'صمام الإغلاق الطارئ لمخرج السائل UZV-002 (موديل نافيسووركس الأصلي)',
+                desc_en: "Authentic 3D CAD geometry extracted from 19-01-2021_Majnoon_NAVIS_IFC4.ifczip. Trips closed on LALL <= 770 mm (Note 26 Blow-by).",
+                desc_ar: "مجسم ثلاثي الأبعاد مستخرج مباشرة من ملف نافيسووركس الرسمي. يغلق تلقائياً عند انخفاض المستوى لمنع عبور الغاز.",
+                data: [{ label: "IFC Tag", val: "/CP2-711-UZV-002" }, { label: "Interlock", val: "LALL 770 mm / Note 26" }]
+            },
+            "UZV-003": {
+                tag: "CP2-711-UZV-003",
+                title_en: 'Gas Outlet Emergency Shutdown Valve UZV-003 (Navisworks CAD)',
+                title_ar: 'صمام الإغلاق الطارئ لمخرج الغاز UZV-003 (موديل نافيسووركس الأصلي)',
+                desc_en: "Authentic 3D CAD geometry extracted from 19-01-2021_Majnoon_NAVIS_IFC4.ifczip. Trips closed on LAHH >= 2700 mm.",
+                desc_ar: "مجسم ثلاثي الأبعاد مستخرج مباشرة من ملف نافيسووركس الرسمي. يغلق عند ارتفاع المستوى الأقصى لمنع دخول السائل لخط الغاز.",
+                data: [{ label: "IFC Tag", val: "/CP2-711-UZV-003" }, { label: "Interlock", val: "LAHH 2700 mm / Note 26" }]
+            },
+            "PSV-001A": {
+                tag: "CP2-711-PSV-001A",
+                title_en: 'Pilot-Operated Safety Relief Valve PSV-001A (Navisworks CAD)',
+                title_ar: 'صمام الأمان وتفريغ الضغط PSV-001A (موديل نافيسووركس الأصلي)',
+                desc_en: "Authentic 3D CAD geometry extracted from 19-01-2021_Majnoon_NAVIS_IFC4.ifczip. Protects vessel against overpressure > 15.0 barg.",
+                desc_ar: "مجسم ثلاثي الأبعاد مستخرج مباشرة من ملف نافيسووركس الرسمي. يحمي العازلة من تجاوز الضغط التصميمي.",
+                data: [{ label: "IFC Tag", val: "/CP2-711-PSV-001A" }, { label: "Set Pressure", val: "15.0 barg" }]
+            },
+            "PSV-001B": {
+                tag: "CP2-711-PSV-001B",
+                title_en: 'Pilot-Operated Safety Relief Valve PSV-001B (Navisworks CAD)',
+                title_ar: 'صمام الأمان وتفريغ الضغط PSV-001B (موديل نافيسووركس الأصلي)',
+                desc_en: "Authentic 3D CAD geometry extracted from 19-01-2021_Majnoon_NAVIS_IFC4.ifczip. Standby/parallel relief valve.",
+                desc_ar: "مجسم ثلاثي الأبعاد مستخرج مباشرة من ملف نافيسووركس الرسمي. صمام أمان رديف لحماية العازلة.",
+                data: [{ label: "IFC Tag", val: "/CP2-711-PSV-001B" }, { label: "Set Pressure", val: "15.0 barg" }]
+            },
+            "FE-001": {
+                tag: "CP2-711-FE-001",
+                title_en: '14" Coriolis Mass Flow Meter FE-001 (Navisworks CAD)',
+                title_ar: 'عداد الجريان الكتلي كوريوليس FE-001 (موديل نافيسووركس الأصلي)',
+                desc_en: "Authentic 3D CAD geometry extracted from 19-01-2021_Majnoon_NAVIS_IFC4.ifczip. Measures crude oil outflow mass rate.",
+                desc_ar: "مجسم ثلاثي الأبعاد مستخرج مباشرة من ملف نافيسووركس الرسمي. يقيس معدل تدفق وكثافة النفط الخام الخارج.",
+                data: [{ label: "IFC Tag", val: "/CP2-711-FE-001" }, { label: "Loop", val: "FIC-001 Cascade" }]
+            },
+            "FT-002": {
+                tag: "CP2-711-FT-002",
+                title_en: 'Gas Outlet Flow Transmitter FT-002 (Navisworks CAD)',
+                title_ar: 'مرسلة قياس تدفق الغاز FT-002 (موديل نافيسووركس الأصلي)',
+                desc_en: "Authentic 3D CAD geometry extracted from 19-01-2021_Majnoon_NAVIS_IFC4.ifczip.",
+                desc_ar: "مجسم ثلاثي الأبعاد مستخرج مباشرة من ملف نافيسووركس الرسمي لقياس تدفق الغاز.",
+                data: [{ label: "IFC Tag", val: "/CP2-711-FT-002" }, { label: "Service", val: "Gas Flow Metering" }]
+            },
+            "LT-002": {
+                tag: "CP2-711-LT-002",
+                title_en: 'Level Bridle & Guided Wave Radar LT-002 / LZT-001 (Navisworks CAD)',
+                title_ar: 'عنق ومقياس المستوى الراداري LT-002 / LZT-001 (موديل نافيسووركس الأصلي)',
+                desc_en: "Authentic 3D CAD geometry of level bridle VT-711001-L1A/L2A and level transmitters LT-002 / LZT-001 extracted from IFC4.",
+                desc_ar: "مجسم ثلاثي الأبعاد لأنابيب قياس المستوى الجانبية والمرسلات الرادارية LT-002 / LZT-001 من ملف نافيسووركس.",
+                data: [{ label: "IFC Tag", val: "/CP2-711-LT-002" }, { label: "NLL Setpoint", val: "1,550 mm" }]
+            },
+            "PT-003": {
+                tag: "CP2-711-PT-003",
+                title_en: 'Vessel Pressure Transmitter PT-003 / PZT-001 (Navisworks CAD)',
+                title_ar: 'مرسلة ضغط العازلة PT-003 / PZT-001 (موديل نافيسووركس الأصلي)',
+                desc_en: "Authentic 3D CAD geometry of top pressure transmitters PT-003 and PZT-001 extracted from 19-01-2021_Majnoon_NAVIS_IFC4.ifczip.",
+                desc_ar: "مجسم ثلاثي الأبعاد لمرسلات الضغط العلوية PT-003 و PZT-001 على ظهر العازلة من ملف نافيسووركس.",
+                data: [{ label: "IFC Tag", val: "/CP2-711-PT-003" }, { label: "Operating Setpoint", val: "5.00 barg" }]
+            },
+            "UZV-053": {
+                tag: "CP2-711-UZV-053",
+                title_en: '30" Inlet HIPPS / ESD Shutdown Valve #1 UZV-053 (Navisworks CAD)',
+                title_ar: 'صمام الإغلاق الطارئ الرئيسي الأول لخط الدخول 30 بوصة UZV-053 (نافيسووركس)',
+                desc_en: "Authentic 30-inch Class 300 emergency shutdown valve #1 on inlet header P-711100/P-711101 upstream of separator N1.",
+                desc_ar: "صمام الإغلاق الطارئ الأول (30 بوصة) على خط دخول النفط الخام الرئيسي قبل العازلة لحمايتها من الضغط الزائد.",
+                data: [{ label: "IFC Tag", val: "/CP2-711-UZV-053" }, { label: "Line", val: '30"-P-711100-PR2-02' }]
+            },
+            "UZV-054": {
+                tag: "CP2-711-UZV-054",
+                title_en: '30" Inlet HIPPS / ESD Shutdown Valve #2 UZV-054 (Navisworks CAD)',
+                title_ar: 'صمام الإغلاق الطارئ الرئيسي الثاني لخط الدخول 30 بوصة UZV-054 (نافيسووركس)',
+                desc_en: "Authentic 30-inch Class 300 emergency shutdown valve #2 in series with UZV-053 on inlet line P-711101 feeding N1.",
+                desc_ar: "صمام الإغلاق الطارئ الثاني على التوالي (30 بوصة) على خط التغذية P-711101 لعزل العازلة بالكامل عند الطوارئ.",
+                data: [{ label: "IFC Tag", val: "/CP2-711-UZV-054" }, { label: "Line", val: '30"-P-711101-PR2-01' }]
+            },
+            "PZT-053": {
+                tag: "CP2-711-PZT-053A/B/C",
+                title_en: '2oo3 HIPPS Inlet Pressure Safety Transmitters PZT-053A/B/C (Navisworks CAD)',
+                title_ar: 'منظومة مرسلات حماية الضغط العالي 2oo3 على خط الدخول PZT-053A/B/C',
+                desc_en: "Triple-redundant (2oo3 voting) High-Integrity Pressure Protection transmitters with root isolation valves on 30-inch inlet line P-711101.",
+                desc_ar: "ثلاث مرسلات ضغط أمان بتصويت (2 من 3) مع صمامات العزل على خط الدخول 30 بوصة لإغلاق UZV-053 و UZV-054 عند ارتفاع الضغط.",
+                data: [{ label: "IFC Tags", val: "PZT-053A / B / C" }, { label: "Voting", val: "2oo3 SIL-3 HIPPS" }]
+            },
+            "PT-052": {
+                tag: "CP2-711-PT-052",
+                title_en: 'Inlet Header Inter-Valve Pressure Transmitter PT-052 (Navisworks CAD)',
+                title_ar: 'مرسلة قياس ضغط خط الدخول بين صمامي الإغلاق PT-052',
+                desc_en: "Monitors cavity pressure between 30-inch inlet shutdown valves UZV-053 and UZV-054 for leak tightness verification.",
+                desc_ar: "تقيس ضغط خط الدخول 30 بوصة بين صمامي الإغلاق الطارئ UZV-053 و UZV-054 للتحقق من العزل.",
+                data: [{ label: "IFC Tag", val: "/CP2-711-PT-052" }, { label: "Location", val: "Between UZV-053 & UZV-054" }]
+            },
+            "TT-051": {
+                tag: "CP2-711-TT-051",
+                title_en: '30" Inlet Crude Temperature Transmitter TT-051 (Navisworks CAD)',
+                title_ar: 'مرسلة قياس درجة حرارة النفط الخام الداخل TT-051',
+                desc_en: "Thermowell and temperature transmitter on 30-inch inlet line P-711101 measuring incoming wellhead fluid temperature.",
+                desc_ar: "حساس ومرسلة درجة حرارة المائع الداخل على أنبوب التغذية 30 بوصة P-711101.",
+                data: [{ label: "IFC Tag", val: "/CP2-711-TT-051" }, { label: "Reading", val: "65.0 °C" }]
+            },
+            "SP-CP02": {
+                tag: "CP2-711-SP-CP02 / CC03",
+                title_en: 'Inlet Corrosion Coupon & Sampling Station SP-CP02 / CC03 (Navisworks CAD)',
+                title_ar: 'محطة فحص التآكل وأخذ العينات على خط الدخول SP-CP02 / CC03',
+                desc_en: "Inlet corrosion monitoring coupon retriever and sampling assembly on the 30-inch P-711101 vertical riser into N1.",
+                desc_ar: "نقطة فحص شرائح التآكل وأخذ العينات على خط الدخول 30 بوصة قبل دخوله فوهة العازلة N1.",
+                data: [{ label: "IFC Tag", val: "/CP2-711-SP-CP02" }, { label: "Line", val: '30"-P-711101-P1B-01' }]
+            }
+        };
+
+        if (window.NAVIS_CAD_DATA && window.NAVIS_CAD_DATA.batches) {
+            const scaleInv = 1.0 / (window.NAVIS_CAD_DATA.scale || 500.0);
+
+            function decodeI16ToF32(b64) {
+                const bin = atob(b64);
+                const bytes = new Uint8Array(bin.length);
+                for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+                const i16 = new Int16Array(bytes.buffer);
+                const f32 = new Float32Array(i16.length);
+                for (let i = 0; i < i16.length; i++) f32[i] = i16[i] * scaleInv;
+                return f32;
+            }
+
+            function decodeU16(b64) {
+                const bin = atob(b64);
+                const bytes = new Uint8Array(bin.length);
+                for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+                return new Uint16Array(bytes.buffer);
+            }
+
+            // Procedural metallic grating texture for structure_grating
+            const gratingCanvas = document.createElement('canvas');
+            gratingCanvas.width = 64;
+            gratingCanvas.height = 64;
+            const gctx = gratingCanvas.getContext('2d');
+            gctx.fillStyle = '#2b394a';
+            gctx.fillRect(0, 0, 64, 64);
+            gctx.fillStyle = '#1e293b';
+            for (let i = 0; i <= 64; i += 8) {
+                gctx.fillRect(i, 0, 2, 64);
+                gctx.fillRect(0, i, 64, 2);
+            }
+            const gratingTexture = new THREE.CanvasTexture(gratingCanvas);
+            gratingTexture.wrapS = THREE.RepeatWrapping;
+            gratingTexture.wrapT = THREE.RepeatWrapping;
+            gratingTexture.repeat.set(16, 16);
+
+            window.NAVIS_CAD_DATA.batches.forEach(batch => {
+                const geom = new THREE.BufferGeometry();
+                geom.setAttribute('position', new THREE.BufferAttribute(decodeI16ToF32(batch.v), 3));
+                geom.setIndex(new THREE.BufferAttribute(decodeU16(batch.i), 1));
+                geom.computeVertexNormals();
+
+                let mat;
+                if (batch.cat === "vessel_shell") {
+                    mat = new THREE.MeshStandardMaterial({
+                        color: 0xd2cdd5,
+                        metalness: 0.58,
+                        roughness: 0.24,
+                        side: THREE.DoubleSide,
+                        clippingPlanes: [educationalClipPlane]
+                    });
+                    navisShellMats.push(mat);
+                } else if (batch.cat === "vessel_nozzles_saddles") {
+                    mat = new THREE.MeshStandardMaterial({
+                        color: batch.color || "#9aa8b8",
+                        metalness: 0.65,
+                        roughness: 0.28,
+                        side: THREE.DoubleSide,
+                        clippingPlanes: [educationalClipPlane]
+                    });
+                    navisShellMats.push(mat);
+                } else if (batch.cat === "structure") {
+                    mat = new THREE.MeshStandardMaterial({
+                        color: 0x3b4b59,
+                        metalness: 0.18,
+                        roughness: 0.88,
+                        flatShading: true,
+                        side: THREE.DoubleSide
+                    });
+                } else if (batch.cat === "piping") {
+                    mat = new THREE.MeshStandardMaterial({
+                        color: 0x00acc1,
+                        metalness: 0.75,
+                        roughness: 0.24,
+                        side: THREE.DoubleSide
+                    });
+                    navisPipingMats.push(mat);
+                } else if (batch.cat.startsWith("tag:")) {
+                    const tname = batch.cat.split(":")[1];
+                    let vColor = "#38bdf8";
+                    if (tname === "FV-001" || tname === "PV-003B") vColor = "#f97316";
+                    else if (tname === "PV-003A" || tname.startsWith("PSV-")) vColor = "#ef4444";
+                    else if (tname.startsWith("UZV-")) vColor = "#eab308";
+                    else if (tname === "FE-001" || tname === "FT-002" || tname === "LT-002" || tname === "PT-003") vColor = "#06b6d4";
+
+                    mat = new THREE.MeshStandardMaterial({
+                        color: vColor,
+                        metalness: 0.72,
+                        roughness: 0.25,
+                        side: THREE.DoubleSide
+                    });
+                    navisPipingMats.push(mat);
+                } else {
+                    mat = new THREE.MeshStandardMaterial({ color: batch.color || "#94a3b8", side: THREE.DoubleSide });
+                }
+
+                const mesh = new THREE.Mesh(geom, mat);
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                navisCadGroup.add(mesh);
+
+                if (batch.cat.startsWith("tag:")) {
+                    const tname = batch.cat.split(":")[1];
+                    if (NAVIS_TAG_META[tname]) {
+                        registerInteractable(mesh, NAVIS_TAG_META[tname]);
+                        navisTagMeshes[tname] = mesh;
+                    }
+                } else if (batch.cat === "vessel_shell") {
+                    registerInteractable(mesh, {
+                        tag: "CP2-V-71101 (Navisworks IFC4)",
+                        title_en: "1st Stage 3-Phase Production Separator (13.6m x 4.2m ID)",
+                        title_ar: "عازلة الإنتاج ثلاثية الأطوار للمرحلة الأولى CP2-V-71101",
+                        desc_en: "Authentic 3D CAD vessel shell & elliptical heads extracted directly from 19-01-2021_Majnoon_NAVIS_IFC4.ifczip.",
+                        desc_ar: "جسم العازلة والرؤوس الإهليلجية مستخرجة مباشرة بأبعادها الحقيقية من ملف نافيسووركس الرسمي لحقل مجنون.",
+                        data: [
+                            { label: "IFC GlobalId", val: "3R4cFZExGP4Jlzva7LvCnd" },
+                            { label: "Dimensions", val: "4,272 mm OD × 13,600 mm T/T" }
+                        ]
+                    });
+                }
+            });
+
+            // Hide procedural exterior duplicates so 100% authentic Navisworks CAD meshes represent the exterior, platform, piping & valves
+            [
+                skidMesh, fixedSaddleGroup, slideSaddleGroup,
+                shellBackMesh, shellCutMesh, headL, headR, manwayGroup,
+                bridleGroup, ptGroup, ttGroup,
+                liqPltfGroup, upperPltfGroup, liqSleepersGroup,
+                feedPipe, n1Flange, feedSleeper, feedShoe, sdv051.group, sdv052.group,
+                liqNozzleN2, liqElbow, liqPipeH, sdv002.group, eccReducer, fv001Valve.group, coriolisGroup,
+                gasNozzleN3, concReducer, gasRiser, gasElbowZ, gasCrossPipe, gasElbowX, gasHeaderPipe,
+                sdv003.group, flareTee, flareConnPipe, pv003aValve.group, pv003bValve.group, ft002Group
+            ].forEach(obj => { if (obj) obj.visible = false; });
+
+            // Reposition 49L Air Volume Tank next to authentic Navisworks PV-003B on the elevated gas header structure
+            if (window.NAVIS_CAD_DATA.tags && window.NAVIS_CAD_DATA.tags["PV-003B"]) {
+                const pvPos = window.NAVIS_CAD_DATA.tags["PV-003B"];
+                tankGroup.position.set(pvPos[0] + 0.85, pvPos[1] - 0.65, pvPos[2] + 0.55);
+            }
+
+            // Create 3D Floating Clickable Tag Overlay Badges for all authentic Navisworks valves & instruments
+            const labelContainer = document.createElement('div');
+            labelContainer.id = 'navis-3d-labels';
+            labelContainer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;z-index:5;';
+            view3d.appendChild(labelContainer);
+
+            window.navisLabelDom = {};
+            const tagCoords = window.NAVIS_CAD_DATA.tags || {};
+            Object.keys(tagCoords).forEach(tname => {
+                const badge = document.createElement('div');
+                badge.style.cssText = 'position:absolute;transform:translate(-50%,-100%);pointer-events:auto;cursor:pointer;background:rgba(15,23,42,0.88);border:1px solid #38bdf8;color:#f8fafc;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.5);transition:border-color 0.15s;';
+                badge.innerHTML = `<span style="color:#38bdf8;">${tname}</span> <span id="navis-lbl-val-${tname}" style="color:#fde047;"></span>`;
+                badge.onclick = (ev) => {
+                    ev.stopPropagation();
+                    const pos = tagCoords[tname];
+                    controls.target.set(pos[0], pos[1], pos[2]);
+                    camera.position.set(pos[0] + 3.2, pos[1] + 2.0, pos[2] + 4.2);
+                    const d = NAVIS_TAG_META[tname];
+                    if (d) {
+                        cardTag.innerText = d.tag;
+                        cardTitle.innerText = isArabic ? (d.title_ar || d.title_en) : d.title_en;
+                        cardDesc.innerText = isArabic ? (d.desc_ar || d.desc_en) : d.desc_en;
+                        let html = '';
+                        if (d.data) {
+                            d.data.forEach(item => {
+                                html += `<div class="card-data-item"><div class="lbl">${item.label}</div><div class="val">${item.val}</div></div>`;
+                            });
+                        }
+                        cardData.innerHTML = html;
+                        cardInspect.style.display = 'block';
+                    }
+                };
+                labelContainer.appendChild(badge);
+                window.navisLabelDom[tname] = { el: badge, pos: new THREE.Vector3(tagCoords[tname][0], tagCoords[tname][1] + 0.55, tagCoords[tname][2]) };
+            });
+
+            window.updateNavis3dLabels = function() {
+                if (!window.navisLabelDom || sim.current_view !== "3D") return;
+                const w = view3d.clientWidth;
+                const h = view3d.clientHeight;
+                Object.keys(window.navisLabelDom).forEach(tname => {
+                    const item = window.navisLabelDom[tname];
+                    const v = item.pos.clone().project(camera);
+                    if (v.z > 1.0 || v.z < -1.0) {
+                        item.el.style.display = 'none';
+                        return;
+                    }
+                    const x = (v.x * 0.5 + 0.5) * w;
+                    const y = (-(v.y * 0.5) + 0.5) * h;
+                    if (x < 10 || x > w - 10 || y < 45 || y > h - 10) {
+                        item.el.style.display = 'none';
+                        return;
+                    }
+                    item.el.style.display = 'block';
+                    item.el.style.left = `${x}px`;
+                    item.el.style.top = `${y}px`;
+
+                    const valSpan = document.getElementById(`navis-lbl-val-${tname}`);
+                    if (valSpan) {
+                        if (tname === "FV-001") valSpan.textContent = `${sim.fv001_pct.toFixed(0)}%`;
+                        else if (tname === "PV-003B") valSpan.textContent = `${sim.pv003b_pct.toFixed(0)}%`;
+                        else if (tname === "PV-003A") valSpan.textContent = `${sim.pv003a_pct.toFixed(0)}%`;
+                        else if (tname === "LT-002") valSpan.textContent = `${sim.level_mm.toFixed(0)}mm`;
+                        else if (tname === "PT-003") valSpan.textContent = `${sim.pressure_barg.toFixed(2)}bar`;
+                        else if (tname === "FE-001") valSpan.textContent = `${sim.out_liq_m3_h.toFixed(0)}m³/h`;
+                        else if (tname === "UZV-002") valSpan.textContent = sim.uzv002_open ? "OPEN" : "CLOSED";
+                        else if (tname === "UZV-003") valSpan.textContent = sim.uzv003_open ? "OPEN" : "CLOSED";
+                        else if (tname === "UZV-001" || tname === "UZV-053" || tname === "UZV-054") valSpan.textContent = sim.uzv051_open ? "OPEN" : "CLOSED";
+                        else if (tname === "PZT-053" || tname === "PT-052") valSpan.textContent = `${(sim.pressure_barg + 0.15).toFixed(2)}bar`;
+                        else if (tname === "TT-051") valSpan.textContent = "65.0°C";
+                    }
+                });
+            };
+        }
+
+        window.cycleCutawayMode = function() {
+            sim.cutaway_mode = (sim.cutaway_mode + 1) % 3;
+            const btn = document.getElementById('btn-cutaway-mode');
+
+            if (sim.cutaway_mode === 0) {
+                // Mode 0: Educational Cutaway (Vessel Sliced, Authentic Piping & Valves Solid)
+                navisShellMats.forEach(m => { m.clippingPlanes = [educationalClipPlane]; });
+                navisPipingMats.forEach(m => { m.clippingPlanes = []; });
+                pipeMat.clippingPlanes = [];
+                liqPipeMat.clippingPlanes = [];
+                feedPipeMat.clippingPlanes = [];
+                flarePipeMat.clippingPlanes = [];
+                valveBodyMat.clippingPlanes = [];
+                btn.textContent = (isArabic ? TEXTS.ar.cutawayEdu : TEXTS.en.cutawayEdu);
+                btn.className = "btn btn-warning";
+            } else if (sim.cutaway_mode === 1) {
+                // Mode 1: Vessel Cutaway Only (Authentic Navisworks Pipes & Valves 100% Solid)
+                navisShellMats.forEach(m => { m.clippingPlanes = [educationalClipPlane]; });
+                navisPipingMats.forEach(m => { m.clippingPlanes = []; });
+                pipeMat.clippingPlanes = [];
+                liqPipeMat.clippingPlanes = [];
+                feedPipeMat.clippingPlanes = [];
+                flarePipeMat.clippingPlanes = [];
+                valveBodyMat.clippingPlanes = [];
+                btn.textContent = (isArabic ? TEXTS.ar.cutawayVessel : TEXTS.en.cutawayVessel);
+                btn.className = "btn";
+            } else {
+                // Mode 2: Solid Exterior (100% Solid Authentic Navisworks Vessel, Platform, Piping & Valves)
+                navisShellMats.forEach(m => { m.clippingPlanes = []; });
+                navisPipingMats.forEach(m => { m.clippingPlanes = []; });
+                pipeMat.clippingPlanes = [];
+                liqPipeMat.clippingPlanes = [];
+                feedPipeMat.clippingPlanes = [];
+                flarePipeMat.clippingPlanes = [];
+                valveBodyMat.clippingPlanes = [];
+                btn.textContent = (isArabic ? TEXTS.ar.cutawaySolid : TEXTS.en.cutawaySolid);
+                btn.className = "btn btn-active";
+            }
+            const showInternals = (sim.cutaway_mode !== 2);
+            waterCylMesh.visible = showInternals;
+            oilCylMesh.visible = showInternals;
+            waterSurfaceMesh.visible = showInternals;
+            oilSurfaceMesh.visible = showInternals;
+            cfdGroup.visible = showInternals && (sim.cfd_mode !== 2);
+            particleGroup.visible = showInternals && (sim.cfd_mode === 1);
+        };
+
+        // Initialize Mode 1 (Vessel Cutaway + Solid Authentic Navisworks Piping/Valves) or Mode 0
+        navisShellMats.forEach(m => { m.clippingPlanes = [educationalClipPlane]; });
+        navisPipingMats.forEach(m => { m.clippingPlanes = []; });
+        sim.cutaway_mode = 1;
+
+        window.cycleCfdMode = function() {
+            sim.cfd_mode = (sim.cfd_mode + 1) % 3;
+            const btn = document.getElementById('btn-cfd-flow');
+
+            if (sim.cfd_mode === 0) {
+                cfdGroup.visible = true;
+                particleGroup.visible = false;
+                btn.textContent = (isArabic ? TEXTS.ar.flowContinuous : TEXTS.en.flowContinuous);
+                btn.className = "btn btn-active";
+            } else if (sim.cfd_mode === 1) {
+                cfdGroup.visible = true;
+                particleGroup.visible = true;
+                btn.textContent = (isArabic ? TEXTS.ar.flowParticles : TEXTS.en.flowParticles);
+                btn.className = "btn btn-special";
+            } else {
+                cfdGroup.visible = false;
+                particleGroup.visible = false;
+                btn.textContent = (isArabic ? TEXTS.ar.flowOff : TEXTS.en.flowOff);
+                btn.className = "btn";
+            }
+        };
+
+        // Camera Angle Presets (Aligned 1:1 with Authentic Navisworks IFC4 Coordinates)
+        window.setCameraView = function(view) {
+            controls.reset();
+            if (view === 'front') {
+                camera.position.set(-2.5, 2.8, 19.5);
+                controls.target.set(-2.5, 0.8, 0);
+            } else if (view === 'back') {
+                camera.position.set(-2.0, 4.0, -19.5);
+                controls.target.set(-2.0, 0.8, -1.0);
+            } else if (view === 'iso') {
+                camera.position.set(-22.5, 9.5, 21.5);
+                controls.target.set(-2.5, 0.5, 3.5);
+            } else if (view === 'top') {
+                camera.position.set(-1.0, 26.0, 4.0);
+                controls.target.set(-1.0, 0, 4.0);
+            } else if (view === 'gas_deck') {
+                // Close-up of authentic Navisworks overhead gas manifold & platform (PV-003A, PV-003B, PSV-001A/B, UZV-001, UZV-003)
+                camera.position.set(-3.5, 8.2, 6.2);
+                controls.target.set(-7.8, 5.2, -0.5);
+            } else if (view === 'inlet') {
+                // Close-up of 30" inlet HIPPS/ESD valve station (UZV-053, PT-052, UZV-054, PZT-053A/B/C, TT-051) & PR-PR2-GM01 platform
+                camera.position.set(14.5, 1.5, 20.5);
+                controls.target.set(10.0, -3.5, 11.8);
+            } else if (view === 'inlet_riser') {
+                // Close-up of 30" P-711101 turnaround riser, SP-CP02/CC03 & N1 entry
+                camera.position.set(-24.5, 3.5, 10.5);
+                controls.target.set(-14.0, 0.5, 2.5);
+            }
+        };
+
+        // Raycasting Hover & Click
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const cardInspect = document.getElementById('card-inspect');
+        const cardTitle = document.getElementById('card-title');
+        const cardTag = document.getElementById('card-tag');
+        const cardDesc = document.getElementById('card-desc');
+        const cardData = document.getElementById('card-data');
+
+        window.addEventListener('click', (e) => {
+            const rect = renderer.domElement.getBoundingClientRect();
+            if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) return;
+
+            mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(interactables, true);
+
+            if (intersects.length > 0) {
+                let target = intersects[0].object;
+                while (target && !target.userData.tag && target.parent) {
+                    target = target.parent;
+                }
+                if (target && target.userData && target.userData.tag) {
+                    const d = target.userData;
+                    cardTag.innerText = d.tag;
+                    cardTitle.innerText = isArabic ? (d.title_ar || d.title_en) : d.title_en;
+                    cardDesc.innerText = isArabic ? (d.desc_ar || d.desc_en) : d.desc_en;
+
+                    let html = '';
+                    if (d.data) {
+                        d.data.forEach(item => {
+                            html += `<div class="card-data-item"><div class="lbl">${item.label}</div><div class="val">${item.val}</div></div>`;
+                        });
+                    }
+                    cardData.innerHTML = html;
+                    cardInspect.style.display = 'block';
+                }
+            } else {
+                cardInspect.style.display = 'none';
+            }
+        });
+
+        // =========================================================================
+        // 14. UI EVENT LISTENERS & LOCALIZATION
+        // =========================================================================
+        const btnStartup = document.getElementById('btn-startup');
+        const btnStartupHeader = document.getElementById('btn-startup-header');
+        const btnPlay = document.getElementById('btn-play');
+        const btnStep = document.getElementById('btn-step');
+        const btnReset = document.getElementById('btn-reset');
+        const selSpeed = document.getElementById('sel-speed');
+        const selScenario = document.getElementById('sel-scenario');
+        const btnView3d = document.getElementById('btn-view-3d');
+        const btnView2d = document.getElementById('btn-view-2d');
+        const btnLang = document.getElementById('btn-lang');
+        const btnOverrides = document.getElementById('btn-overrides');
+        const drawerOverrides = document.getElementById('drawer-overrides');
+        const btnCamReset = document.getElementById('btn-cam-reset');
+
+        [btnStartup, btnStartupHeader].forEach(b => {
+            if (b) {
+                b.addEventListener('click', () => {
+                    selScenario.value = "SCN-STARTUP";
+                    applyScenario("SCN-STARTUP");
+                });
+            }
+        });
+
+        btnPlay.addEventListener('click', () => {
+            sim.running = !sim.running;
+            btnPlay.innerText = sim.running ? (isArabic ? TEXTS.ar.pause : TEXTS.en.pause) : (isArabic ? TEXTS.ar.run : TEXTS.en.run);
+            btnPlay.className = sim.running ? "btn btn-danger" : "btn btn-success";
+        });
+
+        btnStep.addEventListener('click', () => {
+            physicsStep(1.0);
+            updateUI();
+        });
+
+        btnReset.addEventListener('click', () => {
+            resetSimulation(false);
+            selScenario.value = "SCN-01";
+        });
+
+        selSpeed.addEventListener('change', (e) => {
+            sim.speed = parseFloat(e.target.value);
+        });
+
+        selScenario.addEventListener('change', (e) => {
+            applyScenario(e.target.value);
+            updateUI();
+        });
+
+        btnView3d.addEventListener('click', () => {
+            sim.current_view = "3D";
+            btnView3d.classList.add('btn-active');
+            btnView2d.classList.remove('btn-active');
+            document.getElementById('view-3d').style.display = 'block';
+            document.getElementById('view-2d').style.display = 'none';
+        });
+
+        btnView2d.addEventListener('click', () => {
+            sim.current_view = "2D";
+            btnView2d.classList.add('btn-active');
+            btnView3d.classList.remove('btn-active');
+            document.getElementById('view-2d').style.display = 'block';
+            document.getElementById('view-3d').style.display = 'none';
+        });
+
+        btnOverrides.addEventListener('click', () => {
+            const isVisible = drawerOverrides.style.display === 'block';
+            drawerOverrides.style.display = isVisible ? 'none' : 'block';
+        });
+
+        btnCamReset.addEventListener('click', () => {
+            controls.reset();
+            camera.position.set(0, 4.0, 18.0);
+            controls.target.set(0, 0, 0);
+        });
+
+        btnLang.addEventListener('click', () => {
+            isArabic = !isArabic;
+            document.documentElement.lang = isArabic ? "ar" : "en";
+            document.documentElement.dir = isArabic ? "rtl" : "ltr";
+            applyLanguage();
+            updateUI();
+        });
+
+        // Overrides Checkboxes & Sliders
+        const chkClamp = document.getElementById('chk-clamp');
+        chkClamp.addEventListener('change', (e) => {
+            sim.clamp_override = e.target.checked;
+        });
+
+        const chkFvMan = document.getElementById('chk-fv-man');
+        const sliderFv = document.getElementById('slider-fv001');
+        chkFvMan.addEventListener('change', (e) => {
+            sim.fv001_manual = e.target.checked;
+            sliderFv.disabled = !sim.fv001_manual;
+        });
+        sliderFv.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            sim.fv001_target = val / 100.0;
+            document.getElementById('val-fv-slider').innerText = val.toFixed(1) + "%";
+        });
+
+        const chkPvMan = document.getElementById('chk-pv-man');
+        const sliderPv = document.getElementById('slider-pv003b');
+        chkPvMan.addEventListener('change', (e) => {
+            sim.pv003b_manual = e.target.checked;
+            sliderPv.disabled = !sim.pv003b_manual;
+        });
+        sliderPv.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            sim.pv003b_target = val / 100.0;
+            document.getElementById('val-pv-slider').innerText = val.toFixed(1) + "%";
+        });
+
+        function applyLanguage() {
+            const t = isArabic ? TEXTS.ar : TEXTS.en;
+            document.getElementById('txt-brand-title').innerText = t.title;
+            document.getElementById('txt-brand-sub').innerText = t.sub;
+            document.getElementById('btn-startup').innerText = t.startup;
+            if (btnStartupHeader) btnStartupHeader.innerText = t.startup;
+            btnPlay.innerText = sim.running ? t.pause : t.run;
+            btnStep.innerText = t.step;
+            btnReset.innerText = t.reset;
+            btnCamReset.innerText = t.camReset;
+            btnView3d.innerText = t.view3d;
+            btnView2d.innerText = t.view2d;
+            btnOverrides.innerText = t.overrides;
+            btnLang.innerText = t.lang;
+            document.getElementById('lbl-speed-txt').innerText = t.speed;
+            document.getElementById('lbl-scenario-txt').innerText = t.mission;
+            document.getElementById('txt-clamp-desc').innerText = t.clampDesc;
+            document.getElementById('txt-fv-man').innerText = t.fvMan;
+            document.getElementById('txt-pv-man').innerText = t.pvMan;
+
+            const cutBtn = document.getElementById('btn-cutaway-mode');
+            if (sim.cutaway_mode === 0) cutBtn.innerText = t.cutawayEdu;
+            else if (sim.cutaway_mode === 1) cutBtn.innerText = t.cutawayVessel;
+            else cutBtn.innerText = t.cutawaySolid;
+
+            const cfdBtn = document.getElementById('btn-cfd-flow');
+            if (sim.cfd_mode === 0) cfdBtn.innerText = t.flowContinuous;
+            else if (sim.cfd_mode === 1) cfdBtn.innerText = t.flowParticles;
+            else cfdBtn.innerText = t.flowOff;
+        }
+
+        // =========================================================================
+        // 15. UI UPDATE & DCS MIMIC SYNCHRONIZATION
+        // =========================================================================
+        function updateUI() {
+            // Telemetry Chips
+            document.getElementById('val-time').innerText = sim.time_s.toFixed(1) + " s";
+            document.getElementById('val-level').innerText = sim.level_mm.toFixed(0) + " mm";
+            document.getElementById('val-pressure').innerText = sim.pressure_barg.toFixed(2) + " barg";
+            document.getElementById('val-liq-out').innerText = sim.out_liq_m3_h.toFixed(0) + " m³/h";
+            document.getElementById('val-gas-out').innerText = sim.out_gas_header_kg_h.toLocaleString('en-US', { maximumFractionDigits: 0 }) + " kg/h";
+            document.getElementById('val-fv001').innerText = sim.fv001_pct.toFixed(1) + "%";
+            document.getElementById('val-pv003b').innerText = sim.pv003b_pct.toFixed(1) + "%";
+            document.getElementById('val-flare').innerText = sim.out_gas_flare_kg_h.toFixed(0) + " kg/h";
+            document.getElementById('val-score').innerText = Math.round(sim.score) + " pts";
+
+            // Status Badge
+            const badge = document.getElementById('badge-status');
+            badge.innerText = sim.alarm_status;
+            if (sim.alarm_status === "NORMAL") {
+                badge.className = "status-badge badge-normal";
+            } else if (sim.alarm_status.includes("FILLING") || sim.alarm_status.includes("LAL")) {
+                badge.className = "status-badge badge-warning";
+            } else {
+                badge.className = "status-badge badge-danger";
+            }
+
+            // Startup Banner
+            const startupBanner = document.getElementById('hud-startup-banner');
+            const startupTxt = document.getElementById('txt-startup-banner');
+            if (sim.is_startup_mode) {
+                startupBanner.style.display = "flex";
+                const template = isArabic ? TEXTS.ar.startupBannerFilling : TEXTS.en.startupBannerFilling;
+                startupTxt.innerText = template.replace("{lvl}", sim.level_mm.toFixed(0));
+            } else if (sim.time_s > 0 && sim.time_s < 25.0 && selScenario.value === "SCN-STARTUP") {
+                startupBanner.style.display = "flex";
+                startupTxt.innerText = isArabic ? TEXTS.ar.startupBannerComplete : TEXTS.en.startupBannerComplete;
+            } else {
+                startupBanner.style.display = "none";
+            }
+
+            // 2D DCS Console Elements
+            const dcsWater = document.getElementById('dcs-water-layer');
+            const dcsOil = document.getElementById('dcs-oil-layer');
+            if (dcsWater && dcsOil) {
+                const totalH = Math.min(180, (sim.level_m / VESSEL_D) * 180);
+                const waterH = totalH * sim.water_cut;
+                const oilH = totalH - waterH;
+                dcsWater.setAttribute('height', Math.max(0, waterH));
+                dcsWater.setAttribute('y', 340 - waterH);
+                dcsOil.setAttribute('height', Math.max(0, oilH));
+                dcsOil.setAttribute('y', 340 - totalH);
+            }
+
+            const pt001Val = document.getElementById('dcs-pt001-val');
+            if (pt001Val) pt001Val.textContent = sim.pressure_barg.toFixed(2);
+            const lt002Val = document.getElementById('dcs-lt002-val');
+            if (lt002Val) lt002Val.textContent = sim.level_mm.toFixed(0);
+            const ft001Val = document.getElementById('dcs-ft001-val');
+            if (ft001Val) ft001Val.textContent = sim.out_liq_m3_h.toFixed(0);
+            const fvLbl = document.getElementById('dcs-fv001-lbl');
+            if (fvLbl) fvLbl.textContent = `FV-001: ${sim.fv001_pct.toFixed(0)}%`;
+            const pvLbl = document.getElementById('dcs-pv003b-lbl');
+            if (pvLbl) pvLbl.textContent = `PV-003B: ${sim.pv003b_pct.toFixed(0)}%`;
+        }
+
+        // =========================================================================
+        // 16. ANIMATE LOOP RUNNING AT 60 FPS
+        // =========================================================================
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const dt = Math.min(clock.getDelta(), 0.1);
+            if (sim.running) {
+                physicsStep(dt * sim.speed);
+                updateUI();
+            }
+
+            controls.update();
+
+            if (sim.current_view === "3D") {
+                // Update Conforming Cylindrical Fluid Levels & Surface Plates
+                const h_liq = Math.max(0.005, Math.min(VESSEL_D - 0.01, sim.level_m));
+                const h_water = Math.max(0.002, h_liq * sim.water_cut);
+                const h_oil = Math.max(0.002, h_liq - h_water);
+
+                const y_water_level = -VESSEL_R + h_water;
+                const y_oil_level = -VESSEL_R + h_liq;
+
+                waterTopClipPlane.constant = y_water_level;
+                oilTopClipPlane.constant = y_oil_level;
+                oilBottomClipPlane.constant = -y_water_level;
+
+                // Update horizontal surface chord plate widths: W = 2 * sqrt(R^2 - y^2)
+                const w_water = 2.0 * Math.sqrt(Math.max(0.01, R_IN * R_IN - y_water_level * y_water_level));
+                waterSurfaceMesh.position.y = y_water_level;
+                waterSurfaceMesh.scale.y = w_water;
+                waterSurfaceMesh.visible = (h_water > 0.02);
+
+                const w_oil = 2.0 * Math.sqrt(Math.max(0.01, R_IN * R_IN - y_oil_level * y_oil_level));
+                oilSurfaceMesh.position.y = y_oil_level;
+                oilSurfaceMesh.scale.y = w_oil;
+                oilSurfaceMesh.visible = (h_oil > 0.02);
+
+                // Dynamic Sinusoidal Wave Ripples on Oil Surface (Baffle Calming Effect)
+                if (h_oil > 0.02) {
+                    const pos = oilSurfaceMesh.geometry.attributes.position;
+                    const t = clock.getElapsedTime() * 3.5;
+                    for (let i = 0; i < pos.count; i++) {
+                        const vx = pos.getX(i);
+                        const vz = pos.getY(i);
+                        // Vigorous waves in inlet section (x < 0.2m), calm past perforated baffle plate!
+                        let damp = 0.005;
+                        if (vx < 0.2) {
+                            damp = 0.014 + 0.018 * Math.max(0, (-vx) / (L / 2));
+                        }
+                        const wave = Math.sin(vx * 2.8 + t) * damp + Math.cos(vz * 4.2 + t * 0.8) * (damp * 0.6);
+                        pos.setZ(i, wave);
+                    }
+                    pos.needsUpdate = true;
+                    oilSurfaceMesh.geometry.computeVertexNormals();
+                }
+
+                // Update Schoepentoeter Knockout Cascades (Waterfalls) Height & Waves
+                if (cfdGroup.visible) {
+                    const cascadeH = Math.max(0.2, 0.55 - y_oil_level);
+                    waterfallL.position.y = 0.55 - cascadeH / 2;
+                    waterfallL.scale.y = cascadeH / 2.2;
+                    waterfallR.position.y = 0.55 - cascadeH / 2;
+                    waterfallR.scale.y = cascadeH / 2.2;
+
+                    // Expand splash rings at base of waterfalls
+                    splashRings.forEach((ring, idx) => {
+                        ring.position.y = y_oil_level + 0.01;
+                        const s = 1.0 + 0.4 * Math.sin(clock.getElapsedTime() * 6.0 + idx);
+                        ring.scale.set(s, s, 1);
+                    });
+                }
+
+                // Animate Multiphase Particles when enabled
+                if (particleGroup.visible) {
+                    const flowFactor = (sim.running ? sim.speed : 1.0);
+
+                    // Stokes Settling Water Droplets
+                    const dPos = dropGeom.attributes.position.array;
+                    for (let i = 0; i < dropCount; i++) {
+                        dPos[i * 3] += 0.008 * flowFactor;
+                        dPos[i * 3 + 1] -= dropVel[i] * flowFactor;
+                        if (dPos[i * 3 + 1] < y_water_level || dPos[i * 3] > L / 2 - 1.0) {
+                            dPos[i * 3] = -L / 2 + 3.8 + Math.random() * 2.0;
+                            dPos[i * 3 + 1] = y_water_level + Math.random() * Math.max(0.1, y_oil_level - y_water_level);
+                        }
+                    }
+                    dropGeom.attributes.position.needsUpdate = true;
+
+                    // Buoyant Micro-Bubbles
+                    const bPos = bubbleGeom.attributes.position.array;
+                    for (let k = 0; k < bubbleCount; k++) {
+                        bPos[k * 3] += 0.006 * flowFactor;
+                        bPos[k * 3 + 1] += bubbleVel[k] * flowFactor;
+                        if (bPos[k * 3 + 1] > y_oil_level || bPos[k * 3] > L / 2 - 1.5) {
+                            bPos[k * 3] = -L / 2 + 1.2 + Math.random() * (L - 2.5);
+                            bPos[k * 3 + 1] = -VESSEL_R + 0.1 + Math.random() * 0.3;
+                        }
+                    }
+                    bubbleGeom.attributes.position.needsUpdate = true;
+
+                    // Vapor Mist Particles
+                    const vPos = vaporGeom.attributes.position.array;
+                    for (let v = 0; v < vaporCount; v++) {
+                        vPos[v * 3] += vaporVel[v] * flowFactor;
+                        if (vPos[v * 3] > 4.4) {
+                            vPos[v * 3 + 1] += 0.04 * flowFactor;
+                        }
+                        if (vPos[v * 3] > 4.8 || vPos[v * 3 + 1] > R + 0.3) {
+                            vPos[v * 3] = -L / 2 + 2.0;
+                            vPos[v * 3 + 1] = Math.max(y_oil_level + 0.2, Math.random() * (R - 0.4));
+                        }
+                    }
+                    vaporGeom.attributes.position.needsUpdate = true;
+
+                    // Degassed Oil Streamlines
+                    const oPos = oilFlowGeom.attributes.position.array;
+                    for (let o = 0; o < oilFlowCount; o++) {
+                        oPos[o * 3] += oilFlowVel[o] * flowFactor;
+                        if (oPos[o * 3] >= 5.6) {
+                            oPos[o * 3 + 1] -= 0.03 * flowFactor;
+                        }
+                        if (oPos[o * 3] > 6.0 || oPos[o * 3 + 1] < -VESSEL_R) {
+                            oPos[o * 3] = -L / 2 + 3.8 + Math.random() * 2.0;
+                            oPos[o * 3 + 1] = y_water_level + 0.1 + Math.random() * 0.6;
+                        }
+                    }
+                    oilFlowGeom.attributes.position.needsUpdate = true;
+                }
+
+                // Update Valve Moving Components
+                if (fv001Valve && fv001Valve.stem) {
+                    fv001Valve.stem.position.y = 0.18 * 2.5 + (sim.fv001_pct / 100.0) * 0.18 * 0.8;
+                }
+                if (pv003bValve && pv003bValve.disc) {
+                    pv003bValve.disc.rotation.y = (sim.pv003b_pct / 100.0) * (Math.PI / 2);
+                }
+
+                if (window.updateNavis3dLabels) {
+                    window.updateNavis3dLabels();
+                }
+
+                renderer.render(scene, camera);
+            }
+        }
+
+        // Window Resize Handling
+        window.addEventListener('resize', () => {
+            camera.aspect = view3d.clientWidth / view3d.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(view3d.clientWidth, view3d.clientHeight);
+        });
+
+        // Initialize UI & Start 60 FPS Animation
+        applyLanguage();
+        updateUI();
+        animate();
+
+    </script>
+</body>
+</html>
