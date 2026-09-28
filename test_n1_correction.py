@@ -49,6 +49,13 @@ N1_SOURCE_DIMS_M = (1.495, 1.090, 1.090)
 N1_ELEMENT_COUNT = 1
 N1_TRI_COUNT = 240
 
+# M1A/M1B, the vessel's two manhole/access openings, are excluded by declared
+# rule. Each carries two IFC group proxies, so the exclusion removes four rows
+# and 8,288 triangles from the container that used to hold them. This is a
+# measured, declared removal, not drift.
+M1A_M1B_ELEMENT_COUNT = 4
+M1A_M1B_TRI_COUNT = 8288
+
 # Post-correction container figures, locked as the regression baseline.
 #
 # The container grew from 61/10,943 to 63/15,647 because the connectivity prune
@@ -56,20 +63,34 @@ N1_TRI_COUNT = 240
 # exact duplicate geometry is collapsed before emission. Both changes add real
 # equipment, so the N1 transfer proof is re-anchored on the current extraction.
 #
+# It then shrank from 63/15,647 to 59/7,359 when M1A/M1B were excluded.
+#
 # The pre-correction figures are defined by the transfer itself, not chosen: they
 # are the same container with N1 still inside it, so they are exactly the
 # post-correction figures plus N1_ELEMENT_COUNT / N1_TRI_COUNT. That is how the
 # original 62/11,183 related to 61/10,943, and keeping the relationship (rather
 # than hardcoding unrelated numbers) is what makes the delta below meaningful.
-CONTAINER_ELEMENT_COUNT = 63
-CONTAINER_TRI_COUNT = 15647
+PRE_M1A_M1B_CONTAINER_ELEMENT_COUNT = 63
+PRE_M1A_M1B_CONTAINER_TRI_COUNT = 15647
+CONTAINER_ELEMENT_COUNT = PRE_M1A_M1B_CONTAINER_ELEMENT_COUNT - M1A_M1B_ELEMENT_COUNT
+CONTAINER_TRI_COUNT = PRE_M1A_M1B_CONTAINER_TRI_COUNT - M1A_M1B_TRI_COUNT
 PRE_CORRECTION_CONTAINER_ELEMENT_COUNT = CONTAINER_ELEMENT_COUNT + N1_ELEMENT_COUNT
 PRE_CORRECTION_CONTAINER_TRI_COUNT = CONTAINER_TRI_COUNT + N1_TRI_COUNT
+
+# The six level-instrument interface nozzles, newly placed in their own leaf.
+LEVEL_INTERFACE_ELEMENT_COUNT = 6
+LEVEL_INTERFACE_TRI_COUNT = 1808
 
 # Validated scene triangle total for this extraction. Asserting the absolute
 # total is what catches geometry arriving without being inventoried, or being
 # inventoried without being emitted.
-VALIDATED_SCENE_TRIANGLE_TOTAL = 1583143
+#
+# The total moved 1,583,143 -> 1,573,691. Both directions are declared changes,
+# not drift: -8,288 triangles of M1A/M1B access hardware left the model, -2,972
+# of other equipment's geometry left (18 foreign entities that a bare nozzle-tag
+# substring match had asserted into the model), and +1,808 of level-instrument
+# nozzles entered. The inventory's own accounting closes to unaccounted: 0.
+VALIDATED_SCENE_TRIANGLE_TOTAL = 1573691
 
 # The scene total above is the sum over ALL emitted leaves, so it legitimately
 # grows when a previously deferred line is promoted to proven core on new
@@ -531,11 +552,17 @@ def test_the_six_level_instrument_nozzles_are_placed():
     leaves = _provenance()["leaves"]
     lf = "level_interfaces:L3A_L3B_L1_L2"
     assert lf in leaves
-    placed = {e.split("/")[-1].split(" ")[-1] for e in leaves[lf]}
+    placed = set(leaves[lf])
     for name in ("L3A-LEVEL GAUGE", "L3B-LEVEL GAUGE", "LEVEL GAUGE-L3A",
                  "LEVEL GAUGE-L3B", "LEVEL TRANSMITTER-L1",
                  "LEVEL TRANSMITTER-L2"):
         assert name in placed
+
+    h = _hierarchy()
+    node = {lf["name"]: lf for lf in h["leaves"]}[lf]
+    assert node["elementCount"] == LEVEL_INTERFACE_ELEMENT_COUNT
+    assert node["triCount"] == LEVEL_INTERFACE_TRI_COUNT
+    assert node["geometry_state"] == STATE_CORE
 
 
 def test_the_level_nozzle_leaf_survives_the_connectivity_prune():
