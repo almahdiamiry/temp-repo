@@ -47,27 +47,95 @@ def test_representative_set_present(registry):
     for tag in representative_set:
         assert tag in all_tags, f"Representative tag {tag} missing from tag registry!"
 
+# Keys whose string values ASSERT an equipment identity. A designator that only
+# ever appears in a free-text note is a mention, not an attestation, so prose
+# keys are deliberately excluded from grounding.
+_IDENTITY_KEYS = frozenset({
+    "tag", "primary_element", "associated_restriction", "associated_instrument",
+    "associated_valve", "associated_transmitter", "controller", "controllers",
+    "indicator", "pipe", "twin_train_tag", "ifc_source_element",
+})
+
+
+def _asserted_designators(node, out=None):
+    """Designators the extract asserts, taken from identity-bearing fields only.
+
+    Two failure modes are closed here:
+
+    1. Substring-on-serialised-blob. Prose counted as grounding, so a note
+       reading "HIPPS 2oo3 with 711-UZV-053" satisfied a pid_ref even when
+       UZV-053 had no row at all - and a note could even declare a tag
+       unattested and still pass.
+    2. Requiring exact whole-value equality. That is too strict, because the
+       extractor qualifies a value: primary_element is
+       "711-FE-001 (Orifice Plate)", so the asserted designator is the value's
+       leading token, not the value.
+
+    So: read identity fields only, then take the leading token of each value.
+    """
+    if out is None:
+        out = set()
+    stack = [(False, node)]
+    while stack:
+        is_identity, cur = stack.pop()
+        if isinstance(cur, dict):
+            for k, v in cur.items():
+                stack.append((k in _IDENTITY_KEYS, v))
+        elif isinstance(cur, list):
+            for v in cur:
+                stack.append((is_identity, v))
+        elif isinstance(cur, str) and is_identity:
+            out.add(cur)
+            head = cur.split("(")[0].strip()
+            if head:
+                out.add(head)
+    return out
+
+
 def test_pid_identity_matches_dwg_extract(registry, pid_extract):
     extracted_valve_tags = {v["tag"] for v in pid_extract["valves"]}
     extracted_instr_tags = {i["tag"] for i in pid_extract["instruments"]}
     # A primary element such as FE-001 is not its own instrument row: the P&ID
-    # names it inside its transmitter's primary_element field. Grounding must
-    # therefore also accept the whole extract, or such tags look ungrounded.
-    extract_blob = json.dumps(pid_extract)
+    # names it inside its transmitter's primary_element field, and a secondary
+    # element such as RO-051 is named inside associated_restriction. Those are
+    # field VALUES equal to the designator, so exact value equality covers them
+    # without admitting prose.
+    extract_values = _asserted_designators(pid_extract)
 
     # Check valves
     for tag, v in registry["valves"].items():
         assert "pid_ref" in v
         assert "cad_dwg_source" in v
-        # Verify that the pid_ref is grounded in CAD extract
-        assert any(v["pid_ref"] in ev for ev in extracted_valve_tags), f"Valve {tag} pid_ref {v['pid_ref']} not found in CAD extract!"
+        if v["pid_ref"] is None:
+            # An entry may be IFC-attested only, but then it must SAY so. A
+            # null pid_ref is not a loophole: a fabricated designator still
+            # fails the grounding assert below. UZV-053 is the live case - real
+            # geometry and a real SelectionID, but absent from the extract, so
+            # its rating and duty stay unknown rather than being copied from the
+            # neighbouring UZV-054.
+            assert v.get("ifc_only_attestation"), (
+                f"Valve {tag} has no pid_ref and no ifc_only_attestation "
+                f"statement. Either ground it in the CAD extract or declare "
+                f"explicitly that only the IFC attests it.")
+            continue
+        # Verify that the pid_ref is grounded in CAD extract. A secondary element
+        # such as RO-051 has no row of its own: the P&ID names it inside
+        # UZV-052's associated_restriction field, so grounding must also accept
+        # the extract's asserted values. A fabricated designator matches neither.
+        assert (v["pid_ref"] in extracted_valve_tags
+                or v["pid_ref"] in extract_values), f"Valve {tag} pid_ref {v['pid_ref']} not found in CAD extract!"
 
     # Check instruments
     for tag, inst in registry["instruments"].items():
         assert "pid_ref" in inst
         assert "cad_dwg_source" in inst
-        grounded = (any(inst["pid_ref"] in ei for ei in extracted_instr_tags)
-                    or inst["pid_ref"] in extract_blob)
+        if inst["pid_ref"] is None:
+            assert inst.get("ifc_only_attestation"), (
+                f"Instrument {tag} has no pid_ref and no ifc_only_attestation "
+                f"statement. PDZT-051 is the live case.")
+            continue
+        grounded = (inst["pid_ref"] in extracted_instr_tags
+                    or inst["pid_ref"] in extract_values)
         assert grounded, f"Instrument {tag} pid_ref {inst['pid_ref']} not found in CAD extract!"
 
     # FE-001 is a primary element, so require the specific field that proves it

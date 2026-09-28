@@ -94,7 +94,7 @@ def test_fv001_node_uniqueness_and_extras():
 
 
 def test_merged_and_out_of_bounds_geometry_honest_representation(registry):
-    """Verify FT-002 remains unmodeled in CAD, FV-001 is verified addressable, and UZV-051 remains out-of-bounds."""
+    """Verify FT-002 remains unmodeled in CAD, FV-001 is verified addressable, and UZV-051 is placed."""
     # FT-002: in-line gas meter without discrete 3D solid in source CAD/IFC
     ft002 = registry["instruments"]["FT-002"]
     assert ft002["physical_3d_presence"] == "verified"
@@ -109,11 +109,19 @@ def test_merged_and_out_of_bounds_geometry_honest_representation(registry):
     assert fv001["gltf_ref"] == "tag:FV-001"
     assert fv001["status"] == "VERIFIED"
 
-    # UZV-051: upstream manifold valve, addressable 3D node is not yet available in module GLB
+    # UZV-051: upstream manifold valve. This used to be asserted as
+    # not_yet_available, on the belief that its body was absent from the source.
+    # That belief was wrong: /CP2-711-UZV-051 carries 1,332 triangles and its
+    # IfcRoot.GlobalId resolves to a Navisworks SelectionID. It sat 24.2 m
+    # upstream, outside a spatial_crop bound that was hardcoded in the builder
+    # while the manifest carried a decorative copy of the same numbers. Widening
+    # the crop and reading it from the manifest placed the valve; see
+    # test_n1_correction.py::test_the_inlet_valve_station_is_complete_and_addressable.
     uzv051 = registry["valves"]["UZV-051"]
-    assert uzv051["addressable_3d_node"] == "not_yet_available"
-    assert uzv051["gltf_ref"] is None
-    assert uzv051["status"] == "PARTIALLY VERIFIED"
+    assert uzv051["addressable_3d_node"] == "verified"
+    assert uzv051["gltf_ref"] == "tag:UZV-051"
+    assert uzv051["status"] == "VERIFIED"
+    assert uzv051["verified_triplet"] is True
 
 
 # --- B. Canonical Simulation & State Boundary Verification ---

@@ -1,0 +1,113 @@
+{
+  "schema_version": "1.0",
+  "session_id": "SES-20260928_214601-A351C9",
+  "scenario_id": "SCN-05",
+  "scenario_title_en": "Controlled Depressurization & Drain",
+  "scenario_title_ar": "التصريف المحكوم وخفض المستوى الآمن",
+  "status": "FAILED",
+  "created_at": "2026-09-28T21:46:01.620871+00:00",
+  "completed_at": "2026-09-28T21:46:01.630638+00:00",
+  "elapsed_sim_s": 57.8,
+  "initial_conditions": {
+    "time_s": 0.0,
+    "level_mm": 1550.0,
+    "pressure_barg": 4.987,
+    "feed_liquid_m3_h": 794.94,
+    "feed_gas_kg_h": 71522.86,
+    "out_liquid_m3_h": 794.94,
+    "out_gas_header_kg_h": 71522.86,
+    "fv001_pct": 23.44,
+    "pv003b_pct": 90.0,
+    "pv003a_pct": 0.0,
+    "uzv002_open": true,
+    "uzv003_open": true,
+    "alarm_status": "NORMAL"
+  },
+  "events": [
+    {
+      "time_s": 0.0,
+      "category": "SCENARIO",
+      "message": "Loaded scenario: Controlled Depressurization & Drain",
+      "level": "INFO"
+    },
+    {
+      "time_s": 0.0,
+      "category": "SCENARIO",
+      "message": "Mission started: Controlled Depressurization & Drain",
+      "level": "INFO"
+    },
+    {
+      "time_s": 0.0,
+      "category": "COMMAND",
+      "message": "Operator set FV-001 to Manual to 100.0%",
+      "level": "INFO"
+    },
+    {
+      "time_s": 28.6,
+      "category": "ALARM",
+      "message": "Alarm Active: LAL: Low Liquid Level Pre-Alarm (< 1200 mm)",
+      "level": "WARNING"
+    },
+    {
+      "time_s": 57.8,
+      "category": "INTERLOCK",
+      "message": "ESD Trip Triggered! Causes: LALL <= 770 mm: Liquid SDV (UZV-002) Tripped, Note 26 Interlock: ZSC-002 closed -> Gas SDV (UZV-003) Tripped (Gas Blow-by Prevention)",
+      "level": "DANGER"
+    },
+    {
+      "time_s": 57.8,
+      "category": "SCENARIO",
+      "message": "Mission Failed: LALL Trip Failure: Level dropped to 770 mm, triggering Note 26 emergency gas isolation.",
+      "level": "DANGER"
+    }
+  ],
+  "debrief": {
+    "scenario_id": "SCN-05",
+    "scenario_title_en": "Controlled Depressurization & Drain",
+    "scenario_title_ar": "التصريف المحكوم وخفض المستوى الآمن",
+    "passed": false,
+    "result": "FAILED",
+    "outcome_message": "LALL Trip Failure: Level dropped to 770 mm, triggering Note 26 emergency gas isolation.",
+    "status_message_en": "LALL Trip Failure: Level dropped to 770 mm, triggering Note 26 emergency gas isolation.",
+    "status_message_ar": "فشل التصريف (LALL): هبط المستوى إلى 770 ملم متسبباً برحلة الغاز الاضطرارية بموجب الملاحظة 26.",
+    "duration_s": 57.8,
+    "final_metrics": {
+      "level_mm": 769.3,
+      "pressure_barg": 4.93,
+      "out_liquid_m3_h": 3355.0,
+      "flared_kg_h": 0.0
+    },
+    "final_state": {
+      "level_mm": 769.3,
+      "pressure_barg": 4.93,
+      "out_liquid_m3_h": 3355.0,
+      "total_flared_kg": 0.0,
+      "alarm_status": "TRIP",
+      "tripped_causes": [
+        "LALL <= 770 mm: Liquid SDV (UZV-002) Tripped",
+        "Note 26 Interlock: ZSC-002 closed -> Gas SDV (UZV-003) Tripped (Gas Blow-by Prevention)"
+      ]
+    },
+    "physical_cause_en": "Because free-surface chord width W(h) shrinks at bottom, dh/dt increases for identical volumetric outflow.",
+    "physical_cause_ar": "",
+    "design_lesson_en": "Dropping below 770 mm immediately activates Note 26 emergency gas isolation.",
+    "design_lesson_ar": "",
+    "educational_review": {
+      "learning_objective": "Practice manual valve throttling and understand how cylindrical geometry causes level rate-of-fall to accelerate near the bottom.",
+      "key_takeaway": "Because free-surface chord width W(h) shrinks at bottom, dh/dt increases for identical volumetric outflow.",
+      "design_reference": "DESIGN.md §15.2 Free-Surface Geometry",
+      "safety_note": "Dropping below 770 mm immediately activates Note 26 emergency gas isolation."
+    },
+    "events_count": 6
+  },
+  "summary_metrics": {
+    "duration_s": 57.8,
+    "events_count": 6,
+    "passed": false,
+    "result": "FAILED",
+    "outcome_message": "LALL Trip Failure: Level dropped to 770 mm, triggering Note 26 emergency gas isolation.",
+    "final_level_mm": 769.3,
+    "final_pressure_barg": 4.93,
+    "final_alarm_status": "TRIP"
+  }
+}

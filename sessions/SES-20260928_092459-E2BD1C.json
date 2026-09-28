@@ -1,0 +1,92 @@
+{
+  "schema_version": "1.0",
+  "session_id": "SES-20260928_092459-E2BD1C",
+  "scenario_id": "SCN-01",
+  "scenario_title_en": "Normal Operation Baseline (100 kBOPD)",
+  "scenario_title_ar": "التشغيل الاعتيادي عند نقطة الأساس (100 ألف برميل)",
+  "status": "ABORTED",
+  "created_at": "2026-09-28T09:24:59.565453+00:00",
+  "completed_at": "2026-09-28T09:24:59.570730+00:00",
+  "elapsed_sim_s": 0.0,
+  "initial_conditions": {
+    "time_s": 0.0,
+    "level_mm": 1550.0,
+    "pressure_barg": 4.987,
+    "feed_liquid_m3_h": 794.94,
+    "feed_gas_kg_h": 71522.86,
+    "out_liquid_m3_h": 794.94,
+    "out_gas_header_kg_h": 71522.86,
+    "fv001_pct": 23.44,
+    "pv003b_pct": 90.0,
+    "pv003a_pct": 0.0,
+    "uzv002_open": true,
+    "uzv003_open": true,
+    "alarm_status": "NORMAL"
+  },
+  "events": [
+    {
+      "time_s": 0.0,
+      "category": "SCENARIO",
+      "message": "Loaded scenario: Normal Operation Baseline (100 kBOPD)",
+      "level": "INFO"
+    },
+    {
+      "time_s": 0.0,
+      "category": "SCENARIO",
+      "message": "Mission started: Normal Operation Baseline (100 kBOPD)",
+      "level": "INFO"
+    },
+    {
+      "time_s": 0.0,
+      "category": "SCENARIO",
+      "message": "Mission aborted by operator.",
+      "level": "WARNING"
+    }
+  ],
+  "debrief": {
+    "scenario_id": "SCN-01",
+    "scenario_title_en": "Normal Operation Baseline (100 kBOPD)",
+    "scenario_title_ar": "التشغيل الاعتيادي عند نقطة الأساس (100 ألف برميل)",
+    "passed": false,
+    "result": "FAILED",
+    "outcome_message": "Scenario aborted by operator.",
+    "status_message_en": "Scenario aborted by operator.",
+    "status_message_ar": "تم إيقاف المهمة بواسطة المشغل.",
+    "duration_s": 0.0,
+    "final_metrics": {
+      "level_mm": 1550.0,
+      "pressure_barg": 4.99,
+      "out_liquid_m3_h": 794.9,
+      "flared_kg_h": 0.0
+    },
+    "final_state": {
+      "level_mm": 1550.0,
+      "pressure_barg": 4.99,
+      "out_liquid_m3_h": 794.9,
+      "total_flared_kg": 0.0,
+      "alarm_status": "NORMAL",
+      "tripped_causes": []
+    },
+    "physical_cause_en": "When liquid inflow equals outflow and vapor generation equals header draw, holdup remains steady with zero flaring.",
+    "physical_cause_ar": "",
+    "design_lesson_en": "No alarms or trips should occur during standard nominal conditions.",
+    "design_lesson_ar": "",
+    "educational_review": {
+      "learning_objective": "Understand healthy steady-state process balance, liquid residence time (3.2 min), and cascade controller equilibrium.",
+      "key_takeaway": "When liquid inflow equals outflow and vapor generation equals header draw, holdup remains steady with zero flaring.",
+      "design_reference": "IN-2105-0004 & HMB Case 1 x1.4",
+      "safety_note": "No alarms or trips should occur during standard nominal conditions."
+    },
+    "events_count": 3
+  },
+  "summary_metrics": {
+    "duration_s": 0.0,
+    "events_count": 3,
+    "passed": false,
+    "result": "ABORTED",
+    "outcome_message": "Scenario aborted by operator.",
+    "final_level_mm": 1550.0,
+    "final_pressure_barg": 4.99,
+    "final_alarm_status": "NORMAL"
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "schema_version": "1.0",
+  "session_id": "SES-20260928_204239-66E0AD",
+  "scenario_id": "SCN-07",
+  "scenario_title_en": "Educational Double-Barrier Line Isolation",
+  "scenario_title_ar": "محاكاة تعليمية لعزل الخط ثنائي الحواجز",
+  "status": "COMPLETED",
+  "created_at": "2026-09-28T20:42:39.586774+00:00",
+  "completed_at": "2026-09-28T20:42:39.586774+00:00",
+  "elapsed_sim_s": 0.0,
+  "initial_conditions": {
+    "time_s": 0.0,
+    "level_mm": 1550.0,
+    "pressure_barg": 4.987,
+    "feed_liquid_m3_h": 794.94,
+    "feed_gas_kg_h": 71522.86,
+    "out_liquid_m3_h": 794.94,
+    "out_gas_header_kg_h": 71522.86,
+    "fv001_pct": 23.44,
+    "pv003b_pct": 90.0,
+    "pv003a_pct": 0.0,
+    "uzv002_open": true,
+    "uzv003_open": true,
+    "alarm_status": "NORMAL"
+  },
+  "events": [
+    {
+      "time_s": 0.0,
+      "category": "SCENARIO",
+      "message": "Loaded scenario: Educational Double-Barrier Line Isolation",
+      "level": "INFO"
+    },
+    {
+      "time_s": 0.0,
+      "category": "SCENARIO",
+      "message": "Mission started: Educational Double-Barrier Line Isolation",
+      "level": "INFO"
+    },
+    {
+      "time_s": 0.0,
+      "category": "COMMAND",
+      "message": "Operator set FV-001 to Manual to 0.0%",
+      "level": "INFO"
+    },
+    {
+      "time_s": 0.0,
+      "category": "COMMAND",
+      "message": "Operator changed setpoint: LICA-002 SP -> 1600.0",
+      "level": "INFO"
+    },
+    {
+      "time_s": 0.0,
+      "category": "PROCESS",
+      "message": "Verification test event",
+      "level": "INFO"
+    },
+    {
+      "time_s": 0.0,
+      "category": "SCENARIO",
+      "message": "Mission Accomplished: Line isolation verified",
+      "level": "SUCCESS"
+    }
+  ],
+  "debrief": {
+    "scenario_id": "SCN-07",
+    "scenario_title_en": "Educational Double-Barrier Line Isolation",
+    "scenario_title_ar": "محاكاة تعليمية لعزل الخط ثنائي الحواجز",
+    "passed": true,
+    "result": "COMPLETED",
+    "outcome_message": "Line isolation verified",
+    "status_message_en": "Line isolation verified",
+    "status_message_ar": "المهمة نشطة: فهم العزل ثنائي الحواجز عبر الصمامات المنمذجة (UZV-002 و FV-001) ومراقبة معدل تراكم السائل dh/dt في العازلة.",
+    "duration_s": 0.0,
+    "final_metrics": {
+      "level_mm": 1550.0,
+      "pressure_barg": 4.99,
+      "out_liquid_m3_h": 794.9,
+      "flared_kg_h": 0.0
+    },
+    "final_state": {
+      "level_mm": 1550.0,
+      "pressure_barg": 4.99,
+      "out_liquid_m3_h": 794.9,
+      "total_flared_kg": 0.0,
+      "alarm_status": "NORMAL",
+      "tripped_causes": []
+    },
+    "physical_cause_en": "Closing UZV-002 and stroking FV-001 to 0% establishes an educational two-barrier isolation on the liquid line. With feed continuing, separator level accumulates at dh/dt = Q_in / A_surf(h). In real plant operations, positive mechanical isolation requires physical spades/blinds or verified double-block-and-bleed (DBB).",
+    "physical_cause_ar": "",
+    "design_lesson_en": "Educational simulation only; does not replace formal plant Safe Isolation of Plant & Equipment (SIPE/LOTO) procedures.",
+    "design_lesson_ar": "",
+    "educational_review": {
+      "learning_objective": "Understand two-barrier line isolation across modeled valves (UZV-002 and FV-001) and observe resulting liquid accumulation dh/dt in the separator.",
+      "key_takeaway": "Closing UZV-002 and stroking FV-001 to 0% establishes an educational two-barrier isolation on the liquid line. With feed continuing, separator level accumulates at dh/dt = Q_in / A_surf(h). In real plant operations, positive mechanical isolation requires physical spades/blinds or verified double-block-and-bleed (DBB).",
+      "design_reference": "P&ID Drawing PX-2365-1001 & Line 20\"-P711009/010",
+      "safety_note": "Educational simulation only; does not replace formal plant Safe Isolation of Plant & Equipment (SIPE/LOTO) procedures."
+    },
+    "events_count": 6
+  },
+  "summary_metrics": {
+    "duration_s": 0.0,
+    "events_count": 6,
+    "passed": true,
+    "result": "COMPLETED",
+    "outcome_message": "Active Mission: Understand two-barrier line isolation across modeled valves (UZV-002 and FV-001) and observe resulting liquid accumulation dh/dt in the separator.",
+    "final_level_mm": 1550.0,
+    "final_pressure_barg": 4.99,
+    "final_alarm_status": "NORMAL"
+  }
+}

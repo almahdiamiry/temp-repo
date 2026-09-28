@@ -358,11 +358,28 @@ def test_every_collapsed_duplicate_is_vertex_and_index_identical(tmp_path_factor
 
     Collapsing on a vertex-only hash would silently delete real geometry that
     happens to reuse a vertex array with a different wiring.
+
+    Two kinds of collapse are audited, matched against the inventory accounting
+    so the audit can never be vacuous:
+      * TRUE_GEOMETRIC_DUPLICATE  - distinct proxies with byte-identical
+        geometry. `dupgroups.json` holds independent vertex+index evidence for
+        each group, computed from the geometry directly rather than from the
+        builder's own content hash.
+      * REPEATED_SUB_ITEM         - one proxy that repeats the same emitted
+        mesh. Each collapse carries `identical_sub_item_key`, the exact
+        vertex+index identity key that justified it.
+    On the SEP export there are no true geometric duplicates (only repeated
+    sub-items), so the true-duplicate group must be empty and the accounting
+    must agree - a mismatch means geometry was collapsed without evidence.
     """
     base = tmp_path_factory.mktemp("dupaudit")
     out = _run_build(base / "build")
     groups = json.loads((out / "dupgroups.json").read_text(encoding="utf-8"))
-    assert groups, "no duplicate groups found; the audit is vacuous"
+    inv = json.loads((out / "inventory.json").read_text(encoding="utf-8"))
+    acct = inv["accounting"]
+    dup_rows = inv.get("duplicates_collapsed", [])
+
+    # Independent byte-identity evidence for the true-duplicate groups.
     for g in groups:
         verts = {m["vertexSha256"] for m in g["members"]}
         idxs = {m["indexSha256"] for m in g["members"]}
@@ -374,8 +391,33 @@ def test_every_collapsed_duplicate_is_vertex_and_index_identical(tmp_path_factor
         expected = sorted((m["source_global_id"] or "") for m in g["members"])[0]
         assert (g["survivor"] or "") == expected, (
             f"survivor for {g['content_hash']} is not min(GlobalId)")
+        # each group of N members accounts for exactly N-1 true duplicates
+        assert g["memberCount"] >= 2
 
-    inv = json.loads((out / "inventory.json").read_text(encoding="utf-8"))
-    acct = inv["accounting"]
+    # The accounting must reconcile with the evidence: the number of collapsed
+    # true duplicates equals the total surplus across the audited groups, and
+    # no collapse may exist that the evidence dump does not explain.
+    true_dup_expected = sum(g["memberCount"] - 1 for g in groups)
+    assert acct["collapsed_true_duplicates"] == true_dup_expected, (
+        f"accounting says {acct['collapsed_true_duplicates']} true duplicates "
+        f"but the evidence dump explains {true_dup_expected}")
+
+    # Every REPEATED_SUB_ITEM collapse must carry its exact identity key, and
+    # the count must reconcile with the accounting too.
+    repeated = [r for r in dup_rows if r["reason"] == "REPEATED_SUB_ITEM"]
+    true_rows = [r for r in dup_rows if r["reason"] == "TRUE_GEOMETRIC_DUPLICATE"]
+    assert len(repeated) == acct["collapsed_duplicate_sub_items"], (
+        f"{len(repeated)} repeated-sub-item collapses out of "
+        f"{acct['collapsed_duplicate_sub_items']} accounting rows")
+    for r in repeated:
+        assert r.get("identical_sub_item_key"), (
+            f"{r['source_entity_name']} was collapsed without identity evidence")
+    assert len(true_rows) == acct["collapsed_true_duplicates"]
+
+    # The audit must not be vacuous and must never outrun the accounting.
+    assert (groups or repeated), "no collapse of either kind; the audit is vacuous"
+    assert len(dup_rows) == acct["collapsed_true_duplicates"] + \
+        acct["collapsed_duplicate_sub_items"]
+
     assert acct["unaccounted"] == 0
     assert acct["emitted_source_elements"] <= acct["emitted_mesh_parts"]

@@ -40,6 +40,15 @@ ALLOWED_SELECTOR_KINDS = frozenset({
     # carries bare `/D711001002`-style products. `branch_line` alone silently
     # dropped the drain line, which is why `pdms_line_id` exists.
     "pdms_line_id",
+    # EXACT Navisworks SelectionID, matched against IfcRoot.GlobalId. This is
+    # NOT IFC entity numbering, which is what the guard above exists to stop:
+    # renumbering the input cannot move geometry, because a SelectionID is a
+    # stable Navisworks identity that BIMCamel copies verbatim. It exists solely
+    # for source proxies that carry no name at all - their manifest DisplayName
+    # is literally "Cylinder" - so every name-based selector misses them and they
+    # would otherwise be unrecoverable. Matching is exact string equality, never
+    # a pattern, because '$' is a legal InstanceGuid character.
+    "selection_id",
 })
 BUILD_INPUT_PATH = os.path.join(REPO, "geometry", "build_input.ifc")
 MANIFEST_PATH = os.path.join(REPO, "geometry", "build_input.manifest.json")
@@ -49,35 +58,56 @@ N1_SOURCE_DIMS_M = (1.495, 1.090, 1.090)
 N1_ELEMENT_COUNT = 1
 N1_TRI_COUNT = 240
 
-# M1A/M1B, the vessel's two manhole/access openings, are excluded by declared
-# rule. Each carries two IFC group proxies, so the exclusion removes four rows
-# and 8,288 triangles from the container that used to hold them. This is a
-# measured, declared removal, not drift.
-M1A_M1B_ELEMENT_COUNT = 4
-M1A_M1B_TRI_COUNT = 8288
+# M1A/M1B, the vessel's two manholes, ARE modelled. Engineering inspection
+# 2026-09-28 confirmed the shared source name /CP2-V-71101/M1A/B under
+# /CP2-V-71101/NOZZLES is real access hardware that belongs in the model. In
+# the SEP export each manhole is a SINGLE instance (the old whole-field export
+# carried two rows per manhole), so modelling them puts two elements and 3,584
+# triangles back into the container holding the vessel nozzles and saddles.
+#
+# These same numbers previously described an EXCLUSION, when the manholes were
+# wrongly taken for access-envelope proxies and removed. The regression that
+# matters now is the opposite assertion: they must be present, not absent.
+M1A_M1B_ELEMENT_COUNT = 2
+M1A_M1B_TRI_COUNT = 3584
 
-# Post-correction container figures, locked as the regression baseline.
+# The M1B manhole is modelled with its cover swung open. Four handrail sections
+# of the access platform at that deck level physically intersect the open cover,
+# and those four - and only those four - are removed by declared rule.
 #
-# The container grew from 61/10,943 to 63/15,647 because the connectivity prune
-# no longer discards manifest-tagged fragments (SP-CP02 among them) and because
-# exact duplicate geometry is collapsed before emission. Both changes add real
-# equipment, so the N1 transfer proof is re-anchored on the current extraction.
+# Recounted 2026-09-28 (SEP-export authority) from
+# geometry/emitted_entity_provenance.json: 671 emitted sub-items carry HANDRAIL
+# in their name in total, of which 273 are under /PRIMARY-P1-P1B-TS01-HANDRAILS
+# and 111 under /PLATFORM-P1-P1B-EM01-HANDRAILS; the rest belong to other
+# handrail assemblies such as /PR-PR2-GM01-HANDRAILS. An earlier version of this
+# file said "686 sections of /PRIMARY-P1-P1B-TS01-HANDRAILS and all 496 of
+# /PLATFORM-P1-P1B-EM01-HANDRAILS", which conflated the all-assembly total with
+# the per-assembly count and overstated the platform count by 4.5x. The numbers
+# above are the measured ones. The access platform is permanent structure and
+# the removal is the clashing run, not the railing.
+CLASHING_HANDRAIL_SECTIONS = (55, 269, 275, 276)
+CLASHING_HANDRAIL_ELEMENT_COUNT = 4
+CLASHING_HANDRAIL_TRI_COUNT = 11888
+EMITTED_HANDRAIL_SUBITEMS_TOTAL = 671
+EMITTED_HANDRAIL_SUBITEMS_PRIMARY_P1B_TS01 = 273
+EMITTED_HANDRAIL_SUBITEMS_PLATFORM_P1B_EM01 = 111
+
+# Post-correction container figures, locked as the regression baseline on the
+# SEP-export authority.
 #
-# It then shrank from 63/15,647 to 59/7,359 when M1A/M1B were excluded.
-#
-# The pre-correction figures are defined by the transfer itself, not chosen: they
-# are the same container with N1 still inside it, so they are exactly the
-# post-correction figures plus N1_ELEMENT_COUNT / N1_TRI_COUNT. That is how the
-# original 62/11,183 related to 61/10,943, and keeping the relationship (rather
-# than hardcoding unrelated numbers) is what makes the delta below meaningful.
-PRE_M1A_M1B_CONTAINER_ELEMENT_COUNT = 63
-PRE_M1A_M1B_CONTAINER_TRI_COUNT = 15647
-CONTAINER_ELEMENT_COUNT = PRE_M1A_M1B_CONTAINER_ELEMENT_COUNT - M1A_M1B_ELEMENT_COUNT
-CONTAINER_TRI_COUNT = PRE_M1A_M1B_CONTAINER_TRI_COUNT - M1A_M1B_TRI_COUNT
+# The container holds the vessel nozzles, saddles and the M1A/M1B manholes. On
+# the SEP export it measured 61 elements / 10,943 triangles (including 2
+# manhole elements / 3,584 triangles). The pre-correction figures are defined
+# by the transfer itself, not chosen: they are the same container with N1 still
+# inside it, so they are exactly the post-correction figures plus
+# N1_ELEMENT_COUNT / N1_TRI_COUNT. Keeping the relationship (rather than
+# hardcoding unrelated numbers) is what makes the delta below meaningful.
+CONTAINER_ELEMENT_COUNT = 61
+CONTAINER_TRI_COUNT = 10943
 PRE_CORRECTION_CONTAINER_ELEMENT_COUNT = CONTAINER_ELEMENT_COUNT + N1_ELEMENT_COUNT
 PRE_CORRECTION_CONTAINER_TRI_COUNT = CONTAINER_TRI_COUNT + N1_TRI_COUNT
 
-# The six level-instrument interface nozzles, newly placed in their own leaf.
+# The six level-instrument interface nozzles, placed in their own leaf.
 LEVEL_INTERFACE_ELEMENT_COUNT = 6
 LEVEL_INTERFACE_TRI_COUNT = 1808
 
@@ -85,12 +115,20 @@ LEVEL_INTERFACE_TRI_COUNT = 1808
 # total is what catches geometry arriving without being inventoried, or being
 # inventoried without being emitted.
 #
-# The total moved 1,583,143 -> 1,573,691. Both directions are declared changes,
-# not drift: -8,288 triangles of M1A/M1B access hardware left the model, -2,972
-# of other equipment's geometry left (18 foreign entities that a bare nozzle-tag
-# substring match had asserted into the model), and +1,808 of level-instrument
-# nozzles entered. The inventory's own accounting closes to unaccounted: 0.
-VALIDATED_SCENE_TRIANGLE_TOTAL = 1573691
+# The total is the SEP-export reset value: the build input switched from the
+# 4,645,005,194-byte whole-field export to the scoped first-separator export
+# (docs/Mj-Real-Data/navisworks/New_model/1st_Sperator_area.ifc), so the total
+# dropped from 1,570,091 to 1,368,613 because out-of-scope structure left. The
+# inventory's own accounting closes to unaccounted: 0.
+#
+# 2026-09-28: raised to 1,380,925 by the inlet valve-station completion. The
+# spatial_crop tx upper bound went 21.5 -> 28.5, admitting +366 proxies, which
+# brought in UZV-051, UZV-052, RO-051 and PDZT-051 (+12,312 triangles) plus their
+# cables and platform steel. This is a deliberate scope increase, not drift: see
+# test_the_inlet_valve_station_is_complete_and_addressable for the item-level
+# proof and test_no_declared_leaf_is_starved for the guard that caught the crop
+# being hardcoded in the builder.
+VALIDATED_SCENE_TRIANGLE_TOTAL = 1381181
 
 # The scene total above is the sum over ALL emitted leaves, so it legitimately
 # grows when a previously deferred line is promoted to proven core on new
@@ -451,38 +489,153 @@ def test_selection_manifest_does_not_classify_by_entity_id():
                     f"{lf['name']} selector {value!r} looks like an entity id")
 
 
-def test_m1a_m1b_access_openings_are_excluded_and_recorded_not_deleted():
-    """M1A/M1B are manhole/access openings, not nozzles.
+def test_m1a_m1b_manholes_are_modelled_and_never_excluded():
+    """M1A/M1B are real access hardware, so they belong in the model.
 
-    Engineering inspection identifies them as access hardware, so they must not
-    be modelled as vessel nozzles. They must still be accounted for: the rule is
-    declared in the manifest and the elements land in the inventory under an
-    explicit status, so exclusion is not silent deletion.
+    Engineering inspection 2026-09-28: the two manholes share the source name
+    /CP2-V-71101/M1A/B under /CP2-V-71101/NOZZLES. They are real access
+    hardware. An earlier pass excluded them by conflating them with the
+    clearance/access-envelope proxies that the ACCESS token already covers, and
+    that was wrong: it removed the manholes instead of the railing that clashes
+    with the open manhole cover. This test pins the corrected intent - present in
+    the model, absent from the exclusion list, absent from the excluded rows.
     """
     with open(SELECTION_MANIFEST_PATH, "r", encoding="utf-8") as f:
         manifest = json.load(f)
     tokens = [t.upper() for t in manifest["excluded_tokens"]["tokens"]]
-    assert "/CP2-V-71101/M1A" in tokens
-    assert "/CP2-V-71101/M1B" in tokens
+    for manhole in ("/CP2-V-71101/M1A", "/CP2-V-71101/M1B"):
+        assert not any(manhole.upper() in t for t in tokens), (
+            f"{manhole} is real access hardware and must not be an exclusion "
+            "token; only the clashing handrail is removed")
 
     emitted = _emitted_source_entities()
-    assert "/CP2-V-71101/M1A" not in emitted
-    assert "/CP2-V-71101/M1B" not in emitted
+    assert "/CP2-V-71101/M1A" in emitted
+    assert "/CP2-V-71101/M1B" in emitted
 
     inv = _inventory()
     excluded = {r.get("source_entity_name") for r in inv["excluded"]}
-    assert "/CP2-V-71101/M1A" in excluded
-    assert "/CP2-V-71101/M1B" in excluded
+    assert "/CP2-V-71101/M1A" not in excluded
+    assert "/CP2-V-71101/M1B" not in excluded
 
+    # They must be in the vessel container, and the container must carry the
+    # measured manhole element/triangle counts.
+    container = next(lf for lf in _hierarchy()["leaves"]
+                     if lf["name"] == "vessel_nozzles_saddles")
+    assert container["elementCount"] == CONTAINER_ELEMENT_COUNT
+    assert container["triCount"] == CONTAINER_TRI_COUNT
+    names = {s for s in container.get("source_entities") or []}
+    assert "/CP2-V-71101/M1A" in names
+    assert "/CP2-V-71101/M1B" in names
+
+
+def test_only_the_four_clashing_handrail_sections_are_removed():
+    """The M1B cover is modelled open, so the railing across it must go.
+
+    Measured in local build coordinates, the open M1B cover swings through
+    tx -3.57..-2.18, ty -0.46..0.63, tz 2.14..2.66. Four handrail sections of
+    /PRIMARY-P1-P1B-TS01-HANDRAILS at that deck level (tz 2.34..2.39) occupy
+    tx -2.85..-1.73 and physically intersect it. Those four are excluded by
+    declared rule. M1A has no handrail within 0.8 m and needs no such rule.
+    """
+    with open(SELECTION_MANIFEST_PATH, "r", encoding="utf-8") as f:
+        manifest = json.load(f)
+    tokens = [t.upper() for t in manifest["excluded_tokens"]["tokens"]]
+    for section in CLASHING_HANDRAIL_SECTIONS:
+        token = f"SCTN {section} OF FRMWORK /PRIMARY-P1-P1B-TS01-HANDRAILS"
+        assert token in tokens, f"clashing handrail section {section} is unguarded"
+
+    inv = _inventory()
+    removed = [r for r in inv["excluded"]
+               if "HANDRAIL" in str(r.get("source_entity_name", "")).upper()]
+    assert len(removed) == CLASHING_HANDRAIL_ELEMENT_COUNT, (
+        "only the four measured clashing handrail sections may be removed, got "
+        f"{len(removed)}")
+    for r in removed:
+        name = r["source_entity_name"].upper()
+        assert "PRIMARY-P1-P1B-TS01-HANDRAILS" in name
+        assert any(f"OF SCTN {s} OF" in name for s in CLASHING_HANDRAIL_SECTIONS)
+        assert r["status"] == "OUTSIDE_LOCAL_SCOPE", (
+            "a removed handrail must be recorded, not silently dropped")
+
+    # The rest of the railing must survive: the access platform is permanent
+    # structure, so this is the clashing run, not the handrail family. The
+    # emitted names are sub-item names ("... OF SCTN n OF FRMWORK /..."), and
+    # the fence is family-scoped so a same-numbered section of another family
+    # cannot mask or fake a leak.
+    emitted = {s.upper() for s in _emitted_source_entities()}
+    fence = "OF FRMWORK /PRIMARY-P1-P1B-TS01-HANDRAILS"
+    kept = {s for s in emitted if fence in s}
+    assert len(kept) >= 200, (
+        f"only {len(kept)} handrail sub-items remain; the platform railing must "
+        "survive except for the four clashing sections")
+    for section in CLASHING_HANDRAIL_SECTIONS:
+        leaked = sorted(s for s in kept if f"OF SCTN {section} " + fence in s)
+        assert not leaked, (
+            f"handrail SCTN {section} is excluded by rule but {len(leaked)} of "
+            f"its sub-items are still emitted, e.g. {leaked[:1]}")
+
+    structure = next(lf for lf in _hierarchy()["leaves"]
+                     if lf["name"] == "structure")
+    assert structure["triCount"] > 0
+    assert structure["elementCount"] > 0
+
+
+def test_pmjp1a_b_c_are_absent_from_the_export_and_the_token_cannot_enforce_it():
+    """`/PMJP1A`/`PMJP1B`/`PMJP1C` must not be in the model - and no rule here can stop that.
+
+    docs/DECISIONS.md P13 and docs/NAVIS-MODULE-STRUCTURE.md record the
+    engineer-confirmed layout: `/PMJP1A` = access road, `/PMJP1B` = first
+    separator, `/PMJP1C` = second separator, all three **tree nodes** under
+    `Majnoon_NAVIS_OBS.rvm`. They are NOT layers; an earlier claim to that
+    effect is withdrawn.
+
+    The governing measurement is that all three are 0 occurrences in the crop,
+    in the full 4,645,005,194-byte source AND in the 926,472-row BIMCamel
+    manifest, while sibling `/PMJP1F` has 406 and `/MJP1A` 62. So OBS content
+    that reached the export is the crane and civil scopes - not these nodes.
+
+    Two consequences, and the test exists to keep both visible:
+
+    * Today there is **nothing to remove**. The model is already clean, and the
+      `PMJP1B` name token never had anything to match. Reporting this as an
+      unremoved clash layer would be wrong.
+    * The risk is forward-looking. A re-export with OBS fully appended puts
+      that content in scope, and then exact identities (not a name token) are
+      the only durable defence. The control case is the manholes below, which
+      a broad `/PMJP1B` rule must never be able to delete.
+    """
+    with open(SELECTION_MANIFEST_PATH, "r", encoding="utf-8") as f:
+        manifest = json.load(f)
+    tokens = [t.upper() for t in manifest["excluded_tokens"]["tokens"]]
+    assert "PMJP1B" in tokens
+    assert "CMJP1B" not in tokens, (
+        "/CMJP1B was separately confirmed as permanent structure; it must not "
+        "be swept up by a /PMJP1B rule")
+
+    # Whatever the token can and cannot catch, nothing may be emitted carrying
+    # any of the three node names.
+    emitted = {s.upper() for s in _emitted_source_entities()}
+    for node in ("PMJP1A", "PMJP1B", "PMJP1C"):
+        leaked = sorted(s for s in emitted if node in s)
+        assert not leaked, f"{node} geometry is in the model: {leaked[:3]}"
+
+    # The declared limitation must stay visible in the artifact, so a future
+    # reader cannot mistake the token for enforcement.
+    note = manifest["excluded_tokens"].get("note", "")
+    assert "INERT" in note, (
+        "the manifest must record that the PMJP1B token does not enforce "
+        "anything, otherwise it reads as a guarantee it cannot keep")
 
 def test_the_m1a_axial_clamp_that_corrupted_geometry_is_gone():
     """The x=7.72 clamp moved vertices and was order-dependent.
 
     It flattened the vertices of whichever element happened to follow an /M1A
     proxy in document order - /STIFFENE-R-1 was emitted with all eight vertices
-    at x=7.72 instead of its true 0.911..1.100. With M1A/M1B excluded by rule
-    the clamp is unreachable, so it is removed rather than left as dead code
-    that could silently corrupt a future build.
+    at x=7.72 instead of its true 0.911..1.100. It was removed as dead, silently
+    corrupting code. That judgement no longer depends on M1A being excluded: the
+    clamp's own defect (mutating vertices of an unrelated element based on
+    document order) is sufficient reason to keep it out of the builder, and
+    M1A/M1B are now modelled and must render from authentic source geometry.
     """
     with open(BUILDER_PATH, "r", encoding="utf-8") as f:
         builder = f.read()
@@ -617,12 +770,30 @@ def test_absent_drain_segments_are_recorded_not_fabricated():
 
 
 def test_scaffolding_is_complete_and_nothing_was_dropped():
-    """The permanent scaffold must be fully carried, not partially pruned."""
+    """The permanent scaffold must be fully carried, not partially pruned.
+
+    One exception is now declared and measured: the four handrail sections that
+    physically intersect the M1B manhole's modelled-open cover. This test still
+    fails on any OTHER scaffold loss, so it keeps guarding against a partial
+    prune reappearing.
+    """
     emitted = _emitted_source_entities()
     scaffold = [e for e in emitted if "PRIMARY-P1-P1B-TS01" in e]
     assert len(scaffold) >= 2100
-    assert not any("PRIMARY-P1-P1B-TS01" in r.get("source_entity_name", "")
-                   for r in _inventory()["excluded"])
+
+    fence = "OF FRMWORK /PRIMARY-P1-P1B-TS01-HANDRAILS"
+    unexpected = []
+    for r in _inventory()["excluded"]:
+        name = str(r.get("source_entity_name", "")).upper()
+        if "PRIMARY-P1-P1B-TS01" not in name:
+            continue
+        if fence in name and any(f"OF SCTN {s} {fence}" in name
+                                 for s in CLASHING_HANDRAIL_SECTIONS):
+            continue  # the declared clashing-run exception
+        unexpected.append(name)
+    assert not unexpected, (
+        f"{len(unexpected)} scaffold entities were dropped without a declared "
+        f"rule, e.g. {unexpected[:3]}")
 
 
 # --- Canonical build input integrity ---
@@ -636,15 +807,16 @@ def test_canonical_build_input_and_manifest_agree():
 
     out = manifest["output"]
     assert out["path"] == "geometry/build_input.ifc"
-    assert out["entity_count"] == 787056
-    assert out["building_element_proxy_count"] == 28282
+    assert out["entity_count"] == 819281
+    assert out["building_element_proxy_count"] == 25815
     assert out["entity_id_sha256"] == (
-        "85613443c8ca0b1696aabbbc92cfe90f47e018c4955e686b13f76577005e627e")
+        "4ab7ab132e8364b4e3d8c311e99a58e5345c4f46dad9d6f203caecc915187f4a")
 
     size = os.path.getsize(BUILD_INPUT_PATH)
-    assert size == out["bytes"] == 121855826
-    assert manifest["mode"] == "describe-existing"
-    assert "equivalence" in manifest["reproduction"]
+    assert size == out["bytes"] == 140506168
+    assert manifest["mode"] == "passthrough"
+    assert "passthrough_proven_exact" in manifest["reproduction"]
+
 
 
 def test_canonical_build_input_bytes_match_recorded_hash():
@@ -656,8 +828,8 @@ def test_canonical_build_input_bytes_match_recorded_hash():
         for block in iter(lambda: f.read(1 << 22), b""):
             h.update(block)
     assert h.hexdigest() == (
-        "6c4815daa89ba83735754f8aec4462372051bfee4ff97b7594783778040a1171"), (
-        "geometry/build_input.ifc no longer matches the validated artifact; "
+        "bd4fe9732bbd467f1bc64ed890a031b67b3e085a061cf56f90a0fd96d770f897"), (
+        "geometry/build_input.ifc no longer matches the validated SEP export; "
         "see geometry/README.md before replacing it")
 
 
@@ -858,3 +1030,645 @@ def test_no_separator_internals_were_fabricated_in_the_model():
         "a known P&ID requirement must not disappear from the record")
     assert "known_limitations" in manifest_text, (
         "known_limitations is missing from the selection manifest")
+
+
+# ---------------------------------------------------------------------------
+# Identity-keyed exclusions (Navisworks SelectionID)
+#
+# A name token is a claim about a CLASS of names; a SelectionID is one specific
+# element the engineer looked at. The SelectionID survives the IFC export even
+# though the Navisworks assembly tree does not, because BIMCamel writes it
+# verbatim into IfcRoot.GlobalId - verified 2026-09-28 on all 28,282 proxies in
+# geometry/build_input.ifc against the 926,472-row BIMCamel manifest.
+# ---------------------------------------------------------------------------
+
+BCMANIFEST_PATH = os.path.join(
+    REPO, "docs", "Mj-Real-Data", "navisworks", "New_model",
+    "1st_Sperator_area.ifc.bcmanifest")
+
+# Whole-field manifest retained for the PMJP positive control only: it carries
+# the /PMJP1F and /MJP1A folders that the scoped SEP manifest cannot.
+WHOLE_FIELD_MANIFEST_PATH = os.path.join(
+    REPO, "docs", "Mj-Real-Data", "navisworks",
+    "MGP1-CP2-PIL-MP-7180-0004_007",
+    "19-01-2021_Majnoon_NAVIS_IFC4.ifczip.bcmanifest")
+
+# The four measured M1B open-cover clashes, by SelectionID (SEP-export ids).
+CLASHING_HANDRAIL_SELECTION_IDS = (
+    "1JZHvsBIfXyUhMtIM41CfS",  # SCTN 55
+    "33s8$ajl3Zy0Kz3FQhcJgN",  # SCTN 269
+    "0spQvq4P92cCOlFhWzws1L",  # SCTN 275
+    "25gL9Ga3DgerSDF0nKM0xa",  # SCTN 276
+)
+
+# The manholes, which must survive every exclusion rule. Re-derived from the SEP
+# export: each manhole is a single instance, so there are exactly two protected
+# ids (the old whole-field export carried two rows per manhole).
+PROTECTED_SELECTION_IDS = (
+    "06cIk4wBJeoRestptU6DD4",  # /CP2-V-71101/M1A
+    "13k3cE7DcN811MxFqdiUBu",  # /CP2-V-71101/M1B
+)
+
+
+def _selection():
+    sys.path.insert(0, os.path.join(REPO, "scripts"))
+    from geometry_selection import SelectionManifest
+    return SelectionManifest(SELECTION_MANIFEST_PATH)
+
+
+def _global_id_multiplicity(ifc_path):
+    """Count IFCBUILDINGELEMENTPROXY instances per GlobalId in an IFC file.
+
+    GlobalId is ATTRIBUTE 1 of IfcBuildingElementProxy, positional - the literal
+    string "GlobalId" appears zero times in this export, so a named-attribute
+    regex finds nothing. Verified against a real entity:
+      #40=IFCBUILDINGELEMENTPROXY('2Ga3NUEbgwMJlnsJhYh2yZ',#13,'/EF-...')
+    """
+    import collections
+    rx = re.compile(r"=IFCBUILDINGELEMENTPROXY\('([^']*)'")
+    counts = collections.Counter()
+    with open(ifc_path, "r", encoding="utf-8", errors="replace") as fh:
+        for line in fh:
+            m = rx.search(line)
+            if m:
+                counts[m.group(1)] += 1
+    return counts
+
+
+def test_identity_exclusions_target_exactly_one_instance_each():
+    """A SelectionID is not necessarily one element - guard the blast radius.
+
+    Measured 2026-09-28 on the SEP export: 25,815 IFCBUILDINGELEMENTPROXY
+    instances carry only 23,478 *distinct* GlobalIds, and 671 of those
+    SelectionIDs are instanced more than once, up to 50 times. The BIMCamel
+    manifest has exactly one row per distinct SelectionID (23,478 rows, zero
+    duplicates), so the manifest alone cannot reveal this.
+
+    An identity exclusion therefore removes *every* instance of that
+    SelectionID. The four declared handrail clashes are each instanced once, so
+    they behave exactly as intended - but a future exclusion authored against a
+    shared assembly SelectionID would silently delete up to 50 proxies, and
+    the name token would never have warned anyone. This test fails loudly
+    instead.
+    """
+    m = _selection()
+    declared = sorted(
+        sid for sid in m.identity_exclusions
+        if not str(sid).startswith("__")
+    )
+    if not declared:
+        return
+    if not os.path.exists(BUILD_INPUT_PATH):
+        pytest.skip(f"build input not present at {BUILD_INPUT_PATH}")
+
+    mult = _global_id_multiplicity(BUILD_INPUT_PATH)
+    fat = {sid: mult.get(sid, 0) for sid in declared if mult.get(sid, 0) > 1}
+    assert not fat, (
+        "identity exclusion would remove more than one instance: "
+        f"{fat}. Re-derive the exact SelectionID, or accept the blast radius "
+        "explicitly - a shared SelectionID is how one exclusion deletes many "
+        "elements by accident.")
+
+    absent = [sid for sid in declared if mult.get(sid, 0) == 0]
+    assert not absent, (
+        f"declared identity exclusions absent from the build input: {absent}")
+
+
+def test_identity_exclusions_are_declared_for_exactly_the_four_clashes():
+    """The identity list mirrors the measured handrail removal, nothing else."""
+    m = _selection()
+    assert set(m.identity_exclusions) == set(CLASHING_HANDRAIL_SELECTION_IDS), (
+        "identity_exclusions drifted from the four measured M1B clashes: "
+        f"{sorted(m.identity_exclusions)}")
+
+    for sid in CLASHING_HANDRAIL_SELECTION_IDS:
+        entry = m.identity_exclusions[sid]
+        assert entry["reason"], f"{sid} has no declared reason"
+        assert entry["evidence"], f"{sid} has no evidence pointer"
+
+
+def test_identity_exclusion_removes_the_element_and_nothing_else():
+    """An identity fires on that element only, regardless of its name."""
+    m = _selection()
+    sid = CLASHING_HANDRAIL_SELECTION_IDS[0]
+
+    # The declared element is removed, and the rule that fired is named.
+    excluded, kind, detail = m.exclusion_rule(
+        "POHEDRON 1 OF TMPLATE 1 OF FITTING 1 OF SCTN 55 OF FRMWORK "
+        "/PRIMARY-P1-P1B-TS01-HANDRAILS", "Group", sid)
+    assert excluded is True
+    assert kind == "identity"
+    assert detail == sid
+
+    # The same NAME on a different element is NOT removed by the identity rule.
+    # This is the property a name token cannot provide: two elements sharing a
+    # name are distinguished because only one of them was ever declared.
+    still_excluded, kind, _ = m.exclusion_rule(
+        "POHEDRON 1 OF TMPLATE 1 OF FITTING 1 OF SCTN 55 OF FRMWORK "
+        "/PRIMARY-P1-P1B-TS01-HANDRAILS", "Group", "aDifferentSelectionId")
+    assert kind == "name", (
+        "with an undeclared id the decision must fall back to the name token, "
+        f"got {kind!r}")
+    assert still_excluded is True  # the legacy name token still applies here
+
+    # And an unrelated element with an unrelated name is untouched.
+    excluded, kind, _ = m.exclusion_rule(
+        "BOX 1 OF SUBEQUIPMENT /CP2-P-71102A/NOZZLES", "Group", "aDifferentSelectionId")
+    assert excluded is False
+    assert kind is None
+
+
+def test_identity_matching_is_exact_and_never_extends_a_base():
+    """A declared id must never capture a different, longer SelectionID.
+
+    An earlier version of the rule accepted `base + '$' + digits`, on the belief
+    that BIMCamel appends a `$<n>` when a SelectionID repeats. That belief was
+    wrong. Measured 2026-09-28 against the SEP export, all 25,815
+    `IfcBuildingElementProxy` instances carry a `GlobalId` of exactly 22
+    characters with no exceptions, and the 23,478-row manifest holds 23,478
+    distinct 22-character SelectionIDs with no duplicates - so there is no
+    disambiguated-suffix form to accommodate.
+
+    Worse, `$` is a legal character in a Navisworks InstanceGuid: 6,257 of the
+    23,478 distinct manifest SelectionIDs contain one, and real source proxies
+    end in `$` followed by digits. Those are real, unrelated elements, so a
+    prefix rule would exclude the wrong thing.
+    """
+    m = _selection()
+    sid = CLASHING_HANDRAIL_SELECTION_IDS[0]
+    for suffix in ("$2", "$20", "$100"):
+        longer = sid + suffix
+        excluded, kind, detail = m.exclusion_rule("ANY NAME AT ALL", "Group", longer)
+        assert excluded is False, (
+            f"{longer!r} is a different SelectionID that merely shares a prefix "
+            f"with the declared {sid!r}; it must not inherit its rule")
+        assert kind != "identity"
+        assert detail != sid
+
+
+def test_a_real_id_ending_in_dollar_digits_resolves_to_itself():
+    """SelectionIDs ending in `$digits` are real, first-class ids.
+
+    Measured on the SEP manifest: ids whose tail looks like a numeric suffix are
+    real (60 of 23,478 end in `$`+digits). Under the old prefix rule they
+    could have been reached by stripping `$digits` to hit a shorter declared id,
+    silently applying a rule to the wrong element. Exact matching removes the
+    hazard: a rule resolves only to the full id.
+
+    None of the six declared ids happens to end in `$digits`, so this test uses
+    a real manifest id instead and proves the generic property on it.
+    """
+    if not os.path.exists(BCMANIFEST_PATH):
+        pytest.skip(f"BIMCamel manifest not present at {BCMANIFEST_PATH}")
+    m = _selection()
+    with open(BCMANIFEST_PATH, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            sid = line.split("\t", 1)[0]
+            if len(sid) == 22 and sid[-1].isdigit() and sid[-2] == "$":
+                break
+        else:
+            pytest.skip(
+                "no real `$digits`-terminated SelectionID found in manifest")
+    assert len(sid) == 22
+    assert sid[-2] == "$" and sid[-1].isdigit()
+
+    # The full id is treated as itself: no declared base, no protected entry,
+    # and crucially no truncated prefix inheritance.
+    excluded, kind, detail = m.exclusion_rule("/ANY/NAME", "Group", sid)
+    assert detail in (None, "")
+    assert kind in (None, "")
+    assert excluded is False
+
+    # The truncated form is a different id and must match nothing either. The
+    # point is that neither form is silently rewritten into the other.
+    truncated = sid[:-2]
+    excluded, kind, _ = m.exclusion_rule("/ANY/NAME", "Group", truncated)
+    assert excluded is False
+    assert kind != "identity"
+
+
+
+def test_protected_identities_survive_every_exclusion_rule():
+    """A protected manhole is never removed, and is still classified normally."""
+    m = _selection()
+
+    for sid in PROTECTED_SELECTION_IDS:
+        excluded, kind, detail = m.exclusion_rule("/CP2-V-71101/M1A", "Group", sid)
+        assert excluded is False, f"{sid} must not be excluded"
+        assert kind == "protected"
+        assert detail == sid
+        assert sid in m.protected_selection_ids
+
+    # Protection must not change WHERE the element goes. Blocking classification
+    # instead of blocking exclusion would drop proven-real hardware, which is
+    # the exact M1A/M1B regression this guard exists to prevent.
+    with_id = m.classify("/CP2-V-71101/M1A", "Group", None, None, None,
+                         PROTECTED_SELECTION_IDS[0])
+    without_id = m.classify("/CP2-V-71101/M1A", "Group")
+    assert with_id == without_id, (
+        f"protection altered classification: {with_id} != {without_id}")
+    assert with_id[1] == "vessel_nozzles_saddles", (
+        f"the manhole must still be modelled, got {with_id}")
+
+
+def test_protection_overrides_a_name_token_that_would_exclude():
+    """A protected identity beats a name token, so ACCESS cannot reach it."""
+    m = _selection()
+    # An ACCESS name is excluded for an ordinary element ...
+    excluded, kind, _ = m.exclusion_rule("ACCESS ENVELOPE BOX 1", "Group",
+                                         "anUndeclaredSelectionId")
+    assert excluded is True and kind == "name"
+    # ... but not for a protected one, because the exclusion is a mistake here.
+    excluded, kind, _ = m.exclusion_rule("ACCESS ENVELOPE BOX 1", "Group",
+                                         PROTECTED_SELECTION_IDS[0])
+    assert excluded is False and kind == "protected"
+
+
+def test_an_id_cannot_be_both_excluded_and_protected():
+    """The manifest must not be able to encode a contradiction."""
+    sys.path.insert(0, os.path.join(REPO, "scripts"))
+    from geometry_selection import SelectionManifest
+    with open(SELECTION_MANIFEST_PATH, "r", encoding="utf-8") as f:
+        raw = json.load(f)
+    raw["protected_selection_ids"]["entries"].append(
+        {"selection_id": CLASHING_HANDRAIL_SELECTION_IDS[0], "reason": "conflict"})
+    tmp = os.path.join(REPO, "geometry", ".tmp_conflict_manifest.json")
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(raw, f)
+        with pytest.raises(ValueError):
+            SelectionManifest(tmp)
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+
+
+def test_every_removed_row_records_which_rule_fired():
+    """An exclusion must be auditable without re-deriving the manifest.
+
+    The inventory previously used leaf_reason() for removed rows, which produced
+    the classification-oriented "no manifest selector matches this source
+    identity" for all 58 removals - a sentence that describes an unclassified
+    element, not a deliberately excluded one.
+    """
+    inv = _inventory()
+    by_basis = inv["accounting"].get("excluded_by_basis")
+    assert by_basis is not None, "accounting must break removals down by rule basis"
+    assert by_basis["identity"] + by_basis["name"] == len(inv["excluded"])
+    assert by_basis["identity"] == CLASHING_HANDRAIL_ELEMENT_COUNT, (
+        "the four clashes are keyed by identity, so identity removals must be 4, "
+        f"got {by_basis['identity']}")
+    for row in inv["excluded"]:
+        assert row.get("exclusion_basis") in ("identity", "name"), row
+        assert row.get("exclusion_rule"), row
+        assert row.get("reason"), row
+
+
+def test_measured_handrail_counts_are_the_ones_recorded():
+    """Lock the recount that corrected the 686/496 error in the documentation."""
+    emitted = {s.upper() for s in _emitted_source_entities()}
+    handrail = {s for s in emitted if "HANDRAIL" in s}
+    assert len(handrail) == EMITTED_HANDRAIL_SUBITEMS_TOTAL, (
+        f"expected {EMITTED_HANDRAIL_SUBITEMS_TOTAL} emitted handrail sub-items, "
+        f"got {len(handrail)}")
+    primary = {s for s in handrail
+               if "OF FRMWORK /PRIMARY-P1-P1B-TS01-HANDRAILS" in s}
+    platform = {s for s in handrail
+                if "OF FRMWORK /PLATFORM-P1-P1B-EM01-HANDRAILS" in s}
+    assert len(primary) == EMITTED_HANDRAIL_SUBITEMS_PRIMARY_P1B_TS01
+    assert len(platform) == EMITTED_HANDRAIL_SUBITEMS_PLATFORM_P1B_EM01
+
+    # 686 is the all-assembly total, NOT the P1B count, and the platform count
+    # is 111, not the 496 an earlier pass claimed. Assert the distinction so the
+    # two cannot be silently swapped back.
+    assert EMITTED_HANDRAIL_SUBITEMS_TOTAL > \
+        EMITTED_HANDRAIL_SUBITEMS_PRIMARY_P1B_TS01
+    assert EMITTED_HANDRAIL_SUBITEMS_PLATFORM_P1B_EM01 != 496
+
+
+def test_pmjp_nodes_are_measured_absent_while_crane_folders_are_present():
+    """No speculative PMJP removal, and the reason is measured, not inferred.
+
+    Measured 2026-09-28 across the whole-field 926,472-row BIMCamel manifest:
+    `/PMJP1A`, `/PMJP1B` and `/PMJP1C` are each 0 occurrences, while the crane
+    folders `/PMJP1F` (406) and `/MJP1A` (62) are present. The positive controls
+    matter as much as the zeros - they prove the probe can see a `/PMJP1*`
+    folder when one is actually exported, so the three zeros are absence, not
+    blindness.
+
+    The SEP-export reset narrows the shipped manifest (23,478 rows) to the
+    first-separator scope, so BOTH the zeros and the positive controls come from
+    the retained whole-field manifest (WHOLE_FIELD_MANIFEST_PATH), which still
+    exists alongside the scoped build input. Reading the whole-field manifest
+    keeps the positive control intact, which the scoped manifest cannot provide
+    (every /PMJP1* and crane token is 0 there by scope).
+
+    An earlier version of this test argued from 0 of 26,744 proxies being
+    translucent that the node must be a Navisworks *Layer*. That argument is
+    withdrawn: if the geometry was never exported, nothing translucent appears
+    either way, so the measurement showed absence and proved nothing about
+    layers. The engineer has since confirmed all three are tree nodes under
+    `Majnoon_NAVIS_OBS.rvm`.
+
+    If a future re-export appends OBS in scope these counts move, the test
+    fails, and that failure is the signal to obtain the membership as exact
+    SelectionIDs rather than to widen a name token.
+    """
+    m = _selection()
+    assert not [s for s in m.identity_exclusions if "PMJP" in s.upper()], (
+        "a PMJP identity exclusion was added without the engineer confirming "
+        "that node's membership; unknown membership must not be guessed")
+
+    if not os.path.exists(WHOLE_FIELD_MANIFEST_PATH):
+        pytest.skip(
+            "whole-field BIMCamel manifest not present at "
+            f"{WHOLE_FIELD_MANIFEST_PATH}")
+
+    counts = {"PMJP1A": 0, "PMJP1B": 0, "PMJP1C": 0, "PMJP1F": 0, "MJP1A": 0}
+    with open(WHOLE_FIELD_MANIFEST_PATH, "r", encoding="utf-8",
+              errors="replace") as f:
+        for line in f:
+            parts = line.rstrip("\n").split("\t")
+            if len(parts) < 3:
+                continue
+            name = parts[2]
+            for token in counts:
+                if token in name:
+                    counts[token] += 1
+
+    for node in ("PMJP1A", "PMJP1B", "PMJP1C"):
+        assert counts[node] == 0, (
+            f"{node} is now present in the export ({counts[node]} rows). The "
+            "export scope changed - obtain the node membership from a scoped "
+            "BIMCamel run and add exact SelectionIDs, do not widen a name token")
+    assert counts["PMJP1F"] > 0, (
+        "positive control failed: /PMJP1F is 0, so the probe cannot see a "
+        f"/PMJP1* folder and the three zeros prove nothing. got {counts}")
+
+
+def test_every_declared_selection_id_exists_in_the_shipped_manifest():
+    """A declared id must be a real Navisworks SelectionID, not a transcription.
+
+    This is the check that stops a hand-typed id from silently never matching.
+    """
+    if not os.path.exists(BCMANIFEST_PATH):
+        pytest.skip(f"BIMCamel manifest not present at {BCMANIFEST_PATH}")
+    m = _selection()
+    wanted = set(m.identity_exclusions) | set(m.protected_selection_ids)
+    found = set()
+    with open(BCMANIFEST_PATH, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            parts = line.rstrip("\n").split("\t")
+            if parts and parts[0] in wanted:
+                found.add(parts[0])
+    missing = wanted - found
+    assert not missing, (
+        "declared selection_ids that are not in the BIMCamel manifest and can "
+        f"therefore never match anything: {sorted(missing)}")
+
+
+def test_every_selection_id_is_exactly_22_characters_so_exact_matching_is_sound():
+    """Pin the invariant that lets identity matching be exact rather than prefix.
+
+    Measured 2026-09-28 on the SEP export: all 23,478 distinct rows in the
+    23,482-line companion manifest hold a 22-character SelectionID - the
+    `IfcGloballyUniqueId` limit - and all 25,815 `IfcBuildingElementProxy`
+    GlobalIds in geometry/build_input.ifc are exactly 22 characters, with no
+    exceptions.
+
+    Uniform width is what makes exact matching provably complete: one id can
+    never be a strict `$digits` extension of another, so there is no
+    disambiguated-suffix form that exact equality would miss. If a future export
+    ever produced a longer GlobalId, this test fails and the matching rule has to
+    be revisited deliberately instead of by accident.
+    """
+    if not os.path.exists(BCMANIFEST_PATH):
+        pytest.skip(f"BIMCamel manifest not present at {BCMANIFEST_PATH}")
+    m = _selection()
+    declared = sorted(set(m.identity_exclusions) | set(m.protected_selection_ids))
+    bad = [(s, len(s)) for s in declared if len(s) != 22]
+    assert not bad, (
+        f"declared SelectionIDs are not 22 characters, so the uniform-width "
+        f"invariant behind exact matching no longer holds: {bad}")
+
+    widths = {}
+    with open(BCMANIFEST_PATH, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            sid = line.split("\t", 1)[0]
+            if not sid or " " in sid[:1]:
+                continue
+            widths[len(sid)] = widths.get(len(sid), 0) + 1
+    total = sum(widths.values())
+    # The four non-22 lines are the manifest's own metadata header.
+    assert widths.get(22, 0) >= 23000, (
+        f"expected ~23,478 22-character SelectionIDs, got {widths} ({total} lines)")
+    assert set(widths) - {22} <= {12, 15, 20, 25}, (
+        f"unexpected SelectionID widths appeared: {sorted(widths)}")
+
+
+# --- Starved leaves: the guard for the bug class that hid the inlet valve station.
+#
+# A declared leaf whose selectors match nothing is invisible in every number the
+# build reports. UZV-051, UZV-052 and RO-051 sat at tx 24-28 while the crop ended
+# at 21.5; their selectors were correct the whole time, and the build still passed
+# every population and QA check. Worse, the loss was then recorded as a *fact*
+# ("no geometry at all in the source") in known_limitations and the tag registry,
+# so a measured absence was believed over the model. The only symptom was two
+# numbers in this file.
+
+# Each entry must name a leaf that is genuinely empty, and say which of the two
+# distinct causes applies. An empty leaf not on this list fails the test below.
+STARVED_LEAF_ALLOWLIST = {
+    "tag:FT-002": (
+        "genuinely absent from source: zero proxies carry the name in the SEP "
+        "export, and no export ever contained it. Not a defect."),
+    "tag:SP-CP02": (
+        "pre-existing registry demotion: the geometry IS emitted, as "
+        "unregistered_tag:SP-CP02, because SP-CP02 has no tag_registry entry. "
+        "Unrelated to the inlet station; tracked, not fixed here."),
+}
+
+REGISTRY_PATH = os.path.join(REPO, "config", "tag_registry.json")
+
+
+def _registry_entry(reg, tag):
+    """Find a tag in any registry section. Tags are unique across sections."""
+    for section in ("equipment", "nozzles", "valves", "instruments", "controllers"):
+        if tag in reg.get(section, {}):
+            return reg[section][tag]
+    return None
+
+
+def test_no_declared_leaf_is_starved():
+    """Every selector declared in the manifest must match real source geometry.
+
+    The crop used to be a hardcoded literal in build_twin_pipeline.py while the
+    manifest carried a decorative copy of the same bounds. Editing the manifest
+    changed nothing at all, so the only way this class of loss is caught is by
+    asserting declared-vs-emitted, which nothing else in the suite does.
+    """
+    m = _selection()
+    emitted = {l["name"] for l in _hierarchy()["leaves"]}
+    declared = [(g["id"], lf["name"])
+                for g in m.raw["groups"] for lf in g["leaves"]]
+    assert declared, "manifest declares no leaves at all; the guard would be vacuous"
+
+    starved = {nm for _, nm in declared if nm not in emitted}
+    assert starved == set(STARVED_LEAF_ALLOWLIST), (
+        f"leaves declared in the manifest but absent from the model: "
+        f"{sorted(starved - set(STARVED_LEAF_ALLOWLIST))}. If an item here is "
+        f"real hardware, its geometry is being dropped before classification - "
+        f"check the spatial_crop in the manifest FIRST, and only then suspect "
+        f"the selectors. If it genuinely has no source geometry, add it to "
+        f"STARVED_LEAF_ALLOWLIST with the reason. Stale allowlist entries: "
+        f"{sorted(set(STARVED_LEAF_ALLOWLIST) - starved)}")
+
+    for name, reason in STARVED_LEAF_ALLOWLIST.items():
+        assert reason and reason.endswith("."), (
+            f"allowlisted starved leaf {name} must carry a stated reason")
+
+
+def test_the_inlet_valve_station_is_complete_and_addressable():
+    """The four bodies the old crop cut off must be placed and individually addressable.
+
+    Placement is not enough: each must also be named in the tag registry, or the
+    2D/3D binding has no target and the tag silently cannot be driven.
+    """
+    h = _hierarchy()
+    leaves = {l["name"]: l for l in h["leaves"]}
+    # (leaf, minimum element count, minimum triangles) measured from the source.
+    expected = {
+        "tag:UZV-051": (1, 1000),   # 30" inlet trunk ESD, 1332 tris
+        "tag:UZV-052": (1, 1000),   # 2" equalization/bypass, 1468 tris
+        "tag:UZV-053": (1, 1000),   # 30" HIPPS partner to UZV-054, 1332 tris
+        "tag:RO-051":  (1, 100),    # restriction orifice paired with UZV-052, 152
+        "tag:PDZT-051": (2, 1000),  # permissive to open UZV-051/052, 1392
+    }
+    for name, (min_el, min_tri) in expected.items():
+        assert name in leaves, f"{name} is not an emitted node at all"
+        lf = leaves[name]
+        assert lf.get("elementCount", 0) >= min_el, (
+            f"{name} emitted {lf.get('elementCount')} elements, expected >= {min_el}")
+        assert lf.get("triCount", 0) >= min_tri, (
+            f"{name} emitted {lf.get('triCount')} triangles, expected >= {min_tri}")
+        assert lf.get("geometry_state") == STATE_CORE, (
+            f"{name} is marked {lf.get('geometry_state')!r}, not CORE_CONFIRMED")
+
+    # UZV-053 must have left the unclassified catch-all to become a real tag.
+    assert "tag:UZV-053" in leaves, "UZV-053 regressed into the review bucket"
+
+    reg = json.load(open(REGISTRY_PATH, "r", encoding="utf-8"))
+    for name in expected:
+        tag = name.split(":", 1)[1]
+        entry = _registry_entry(reg, tag)
+        assert entry, f"{tag} has no tag_registry entry, so it cannot be bound 2D->3D"
+        assert entry.get("gltf_ref") == name, (
+            f"{tag} gltf_ref is {entry.get('gltf_ref')!r}, expected {name!r}")
+        assert entry.get("addressable_3d_node") == "verified", (
+            f"{tag} is not addressable: {entry.get('addressable_3d_node')!r}")
+
+
+def test_the_pipeline_reads_the_crop_instead_of_restating_it():
+    """The crop must have exactly one home: the manifest.
+
+    build_twin_pipeline.py used to hardcode `-19.5 <= tx <= 21.5` while the
+    manifest documented the same bounds. That duplication is what made the
+    manifest's crop note decorative - a manifest-only edit rebuilt identically.
+    """
+    with open(BUILDER_PATH, "r", encoding="utf-8") as f:
+        src = f.read()
+    assert "spatial_crop" in src, (
+        "the builder must read spatial_crop from the manifest, but the token "
+        "does not appear in it")
+    # No bare crop bounds restated in the builder. These literals are the old
+    # values; matching either means someone reintroduced a second home.
+    for stale in ("-19.5 <= tx", "tx <= 21.5", "21.5 and", "-7.5 <= tz <= 14.5"):
+        assert stale not in src, (
+            f"build_twin_pipeline.py restates the crop bound {stale!r}; the "
+            f"manifest is the single source of truth for spatial_crop")
+
+# --- N1 tie-in pipe body: recovered by exact SelectionID, guarded against drift ---
+
+N1_TIEIN_LEAF = "service_piping:02_INLET_N1_TIEIN"
+N1_TIEIN_SELECTION_IDS = ("0gxq48Inht$0OKRcZRJ4k9", "1D6IkjrOTadX2TzxztOoyT")
+# The engineer identified 1D6IkjrOTadX2TzxztOoyT in the live Navisworks model as
+# the pipe connected to the vessel. Measured: ty=1.127, tz=0.000 (coaxial with
+# nozzle N1), tx spanning -16.196..-8.579, coincident to 0.000 m with
+# /P711101004, P-711101 its only branch line within 2.5 m, and its far end meets
+# FLANGE 1 of /P-711101-P1B-01/B1 at tx=-8.579, 2.03 m short of N1 at tx=-7.550.
+N1_TIEIN_COORD_M = (-16.196, -8.579)
+
+
+def test_the_n1_tiein_leaf_is_not_silently_empty():
+    """SelectionIDs are export-scoped, so a re-export must fail loudly.
+
+    A re-export mints new SelectionIDs for the same elements, which would leave
+    this leaf empty and quietly drop the inlet pipe from the model. A non-zero
+    element count is asserted so that drift is a test failure, not a surprise.
+    """
+    h = _hierarchy()
+    leaf = next((l for l in h["leaves"] if l["name"] == N1_TIEIN_LEAF), None)
+    assert leaf is not None, f"{N1_TIEIN_LEAF} is missing from the hierarchy"
+    assert leaf.get("elementCount", 0) > 0, (
+        f"{N1_TIEIN_LEAF} emitted no geometry. Its two source proxies are "
+        f"unnamed ('Cylinder' in the Navisworks manifest) and are selected by "
+        f"exact SelectionID, which is scoped to the export run. Re-derive the "
+        f"ids from this export's .bcmanifest and update the manifest."
+    )
+    assert leaf.get("geometry_state") == "CORE_CONFIRMED"
+
+
+def test_the_n1_tiein_pipe_body_sits_on_the_n1_axis_between_flange_and_nozzle(glb):
+    """The recovered pipe must physically abut the vessel tie-in it claims."""
+    lo, hi, dim, _ = _subtree_aabb(glb, N1_TIEIN_LEAF)
+    assert lo[0] <= N1_TIEIN_COORD_M[0] + 0.01
+    assert hi[0] >= N1_TIEIN_COORD_M[1] - 0.01
+    # Coaxial with nozzle N1 at ty=1.127, tz=0.000, so the run centre must be
+    # near that axis rather than at the P-711100 elevation (tz ~11.8).
+    assert abs(dim[1]) < 2.0 and abs(dim[2]) < 2.0, (
+        f"tie-in run is {dim} m, not a nozzle-axis pipe stub")
+
+
+def test_selection_id_selectors_are_exact_and_never_pattern_based():
+    """A declared SelectionID must match only itself, never a longer id.
+
+    '$' is a legal Navisworks InstanceGuid character: 6,257 of the 23,478 SEP
+    manifest ids contain one and 60 already end in '$' plus digits, so any
+    prefix/suffix extension would capture unrelated real elements. That exactness
+    is already asserted for exclusions; this pins it for the positive selector.
+    """
+    m = _selection()
+    for sid in N1_TIEIN_SELECTION_IDS:
+        gid, leaf, _ = m.classify(None, "Cylinder", -16.5, 1.127, 0.0, sid)
+        assert leaf == N1_TIEIN_LEAF, f"{sid} must select the tie-in leaf"
+
+    # An extended id must NOT match.
+    for ext in (sid + "$1" for sid in N1_TIEIN_SELECTION_IDS):
+        _, leaf, _ = m.classify(None, "Cylinder", -16.5, 1.127, 0.0, ext)
+        assert leaf != N1_TIEIN_LEAF, f"{ext} must not match the tie-in leaf"
+
+    # An id that is in no leaf must claim nothing at all.
+    _, leaf, _ = m.classify(None, "Cylinder", -16.5, 1.127, 0.0,
+                            "AAAAAAAAAAAAAAAAAAAAAA")
+    assert leaf is None
+
+
+def test_the_n1_tiein_selector_cannot_steal_a_named_neighbour():
+    """Exact identity must not pull a named element out of its own leaf.
+
+    The tie-in corridor also contains FLANGE 1 of /P-711101-P1B-01/B1,
+    /P711101004, PCOMPONENT 3 and /CP2-V-71101/N1. A catch-all selector (an
+    empty name_token is a substring of every string) would have claimed them and
+    regressed the existing inlet and nozzle leaves.
+    """
+    m = _selection()
+    for sid in N1_TIEIN_SELECTION_IDS:
+        for name, expect in (
+            ("FLANGE 1 of BRANCH /P-711101-P1B-01/B1", "service_piping:02_INLET"),
+            ("/P711101004", "service_piping:02_INLET"),
+            ("PCOMPONENT 3 of BRANCH /P-711101-P1B-01/B1", "service_piping:02_INLET"),
+            ("/CP2-V-71101/N1", "nozzle:N1"),
+        ):
+            _, leaf, _ = m.classify(name, "Group", -8.4, 1.127, 0.0, sid)
+            assert leaf == expect, (
+                f"{name} was claimed as {leaf!r} instead of {expect!r}")
