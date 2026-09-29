@@ -1672,3 +1672,109 @@ def test_the_n1_tiein_selector_cannot_steal_a_named_neighbour():
             _, leaf, _ = m.classify(name, "Group", -8.4, 1.127, 0.0, sid)
             assert leaf == expect, (
                 f"{name} was claimed as {leaf!r} instead of {expect!r}")
+
+# --- GLB integrity: the export must actually be loadable ------------------------
+#
+# `gltfpack -cc` produced a GLB that declared two glTF buffers but shipped the data
+# for only one, so every bufferView pointed at a buffer that was never written and
+# 59 of 68 accessors referenced bytes past the end of the file. The file could not
+# be opened by a viewer at all: trimesh raised IndexError. It stayed invisible
+# because every other test reads node names, `extras` and accessor min/max and
+# never dereferences vertex data, so all 172 passed on an unopenable file.
+#
+# These tests dereference the actual bytes, which is the check that was missing.
+
+def test_the_glb_declares_buffers_it_actually_writes():
+    """A GLB must not reference a glTF buffer that carries no data.
+
+    gltfpack -cc wrote buffers[0] (the real data) and buffers[1] sized to the full
+    unquantized extent, never written, with every bufferView pointing at
+    buffers[1]. Measured on the committed build: 2 buffers, 48 of 56 accessors
+    past the end of the single BIN chunk.
+    """
+    import struct
+
+    blob = open(GLB_PATH, "rb").read()
+    assert blob[:4] == b"glTF", f"not a GLB: magic {blob[:4]!r}"
+    off, chunks = 12, {}
+    while off + 8 <= len(blob):
+        clen, ctype = struct.unpack_from("<II", blob, off)
+        chunks[ctype] = (off + 8, clen)
+        off += 8 + clen
+    assert 0x4E4F534A in chunks, "GLB has no JSON chunk"
+    assert 0x004E4942 in chunks, "GLB has no BIN chunk"
+    js, jl = chunks[0x4E4F534A]
+    g = json.loads(blob[js:js + jl].decode("utf-8"))
+    assert len(g.get("buffers", [])) == 1, (
+        f"GLB declares {len(g.get('buffers', []))} buffers but only the BIN chunk "
+        f"carries data; accessors referencing the others cannot resolve")
+
+
+def test_every_glb_accessor_resolves_inside_the_bin_chunk():
+    """Each accessor's byte range must fall inside the data actually present.
+
+    This is the assertion whose absence let a broken export pass 172 tests. A
+    viewer reading these offsets gets nothing to draw, so the symptom is an empty
+    viewport - indistinguishable from "the change was too small to see".
+    """
+    import struct
+
+    blob = open(GLB_PATH, "rb").read()
+    off, chunks = 12, {}
+    while off + 8 <= len(blob):
+        clen, ctype = struct.unpack_from("<II", blob, off)
+        chunks[ctype] = (off + 8, clen)
+        off += 8 + clen
+    js, jl = chunks[0x4E4F534A]
+    g = json.loads(blob[js:js + jl].decode("utf-8"))
+    bin_len = chunks[0x004E4942][1]
+
+    dangling = []
+    for i, a in enumerate(g["accessors"]):
+        bv = g["bufferViews"][a["bufferView"]]
+        base = (bv.get("byteOffset", 0) or 0) + (a.get("byteOffset", 0) or 0)
+        ncomp = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4}[a["type"]]
+        isize = {5126: 4, 5125: 4, 5123: 2, 5121: 1}[int(a["componentType"])]
+        if base + a["count"] * ncomp * isize > bin_len:
+            dangling.append(i)
+    assert not dangling, (
+        f"{len(dangling)} of {len(g['accessors'])} accessors point past the "
+        f"{bin_len:,}-byte BIN chunk (first: {dangling[:8]}). The GLB cannot be "
+        f"rendered; see the -cc note in scripts/build_twin_pipeline.py.")
+
+
+def test_the_glb_loads_in_a_real_gltf_reader():
+    """The strongest form: hand the file to a reader and demand real geometry.
+
+    Every other test in this file can pass on a file no viewer can open, because
+    they read metadata. This one dereferences the vertices.
+    """
+    trimesh = pytest.importorskip("trimesh")
+    scene = trimesh.load(GLB_PATH, force="scene")
+    geoms = list(scene.geometry.values())
+    assert geoms, "trimesh loaded the GLB but found no geometry"
+    total_verts = sum(len(g.vertices) for g in geoms)
+    assert total_verts > 100_000, (
+        f"only {total_verts:,} vertices decoded; expected the full scene, so the "
+        f"buffer references are still not resolving")
+
+    # trimesh hands back geometry in LOCAL coordinates, so the node transforms
+    # have to be applied before the plant position can be checked.
+    # `to_geometry()` bakes the world transforms in (`dump` is deprecated).
+    world = scene.to_geometry()
+    pts = np.asarray(world.vertices)
+    lo, hi = pts.min(axis=0), pts.max(axis=0)
+    assert pts.shape[0] == total_verts, (
+        f"concatenated {pts.shape[0]:,} verts but the geometries hold {total_verts:,}")
+    # The unit is a ~50 m vessel: reject a coordinate frame that is not metres.
+    extent = hi - lo
+    assert 10.0 < extent[0] < 200.0, (
+        f"scene x extent {extent[0]:.1f} is not a plausible metre-scale plant; "
+        f"bounds {np.round(lo, 1).tolist()}..{np.round(hi, 1).tolist()} suggest the "
+        f"node transforms were not applied")
+    # The N1 tie-in sits at ty 1.127, tz 0.0, spanning tx -17.00..-8.58, so the
+    # scene must straddle tz=0 and reach negative tx. This is the specific piece of
+    # geometry that was invisible while the export was broken.
+    assert lo[0] < -17.0, f"scene tx min {lo[0]:.2f} does not cover the N1 tie-in"
+    assert hi[0] > -8.0, f"scene tx max {hi[0]:.2f} does not cover the N1 tie-in"
+    assert lo[2] < 0.0 < hi[2], "scene does not straddle tz=0 where N1 sits"
